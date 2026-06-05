@@ -7,7 +7,7 @@ namespace Ulak.Gameplay
     /// <summary>
     /// Oyuncu hareketi (greybox v1):
     ///  - Yatay hareket: A/D, sol/sağ ok veya gamepad sol çubuk.
-    ///  - Zıplama: Space / gamepad güney. Zemindeyken (coyote time'lı).
+    ///  - Zıplama: Space / W / yukarı ok / gamepad güney. Zemindeyken (coyote time'lı).
     ///  - Duvarlara çarpma: fizik motoru halleder (Rigidbody2D + Collider).
     ///  - Knockback sırasında kontrol bırakılır (savrulma okunabilir kalsın).
     ///
@@ -94,9 +94,12 @@ namespace Ulak.Gameplay
 
         private static bool JumpPressedThisFrame()
         {
-            bool kb = Keyboard.current != null && Keyboard.current.spaceKey.wasPressedThisFrame;
+            var kb = Keyboard.current;
+            bool key = kb != null && (kb.spaceKey.wasPressedThisFrame
+                                      || kb.upArrowKey.wasPressedThisFrame
+                                      || kb.wKey.wasPressedThisFrame);
             bool pad = Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame;
-            return kb || pad;
+            return key || pad;
         }
 
         private static float ReadMoveInput()

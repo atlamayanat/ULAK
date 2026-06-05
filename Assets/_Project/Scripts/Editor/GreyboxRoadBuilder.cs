@@ -14,6 +14,7 @@ namespace Ulak.EditorTools
     public static class GreyboxRoadBuilder
     {
         private const string SpritePath = "Assets/_Project/Art/Greybox/square.png";
+        private const string SkySpritePath = "Assets/_Project/Art/Background/gokyuzu.png";
         private const string PhysMatPath = "Assets/_Project/Art/Greybox/NoFriction.physicsMaterial2D";
         private const int GroundLayer = 6;
         private const int EnemyLayer = 7;
@@ -36,6 +37,9 @@ namespace Ulak.EditorTools
             cam.backgroundColor = new Color(0.15f, 0.17f, 0.2f);
             cam.clearFlags = CameraClearFlags.SolidColor;
             camGo.transform.position = new Vector3(0, 0, -10);
+
+            // --- Gökyüzü arka planı (gün doğumu kayması) ---
+            BuildSky(cam);
 
             // --- Zemin (uzun yol) ---
             MakeBox("Ground", new Vector2(0, -3f), new Vector2(80, 1f),
@@ -102,6 +106,7 @@ namespace Ulak.EditorTools
 
             var health = go.AddComponent<Health>();
             SerializedSet(health, "maxHealth", 5);
+            go.AddComponent<HealthBar>();
 
             // Ayak hizası zemin kontrol noktası
             var feet = new GameObject("GroundCheck");
@@ -141,6 +146,7 @@ namespace Ulak.EditorTools
             go.AddComponent<Knockback>();
             go.AddComponent<DamageFlash>();
             go.AddComponent<Health>();
+            go.AddComponent<HealthBar>();
             go.AddComponent<SmallEnemyAI>();
             go.AddComponent<EnemyDeath>();
         }
@@ -189,6 +195,40 @@ namespace Ulak.EditorTools
             imp.SaveAndReimport();
 
             return AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
+        }
+
+        // ---- Gökyüzü arka planı ----
+        private static void BuildSky(Camera cam)
+        {
+            var sky = AssetDatabase.LoadAssetAtPath<Sprite>(SkySpritePath);
+            if (sky == null)
+            {
+                // Henüz Sprite olarak import edilmemiş olabilir — importer'ı ayarla ve tekrar dene.
+                var imp = AssetImporter.GetAtPath(SkySpritePath) as TextureImporter;
+                if (imp == null)
+                {
+                    Debug.LogWarning("[Ulak] Gökyüzü görseli bulunamadı: " + SkySpritePath);
+                    return;
+                }
+                imp.textureType = TextureImporterType.Sprite;
+                imp.spritePixelsPerUnit = 64; // 640px / 64 = 10 dünya birimi (ekran yüksekliği)
+                imp.mipmapEnabled = false;
+                imp.SaveAndReimport();
+                sky = AssetDatabase.LoadAssetAtPath<Sprite>(SkySpritePath);
+                if (sky == null)
+                {
+                    Debug.LogWarning("[Ulak] Gökyüzü sprite'ı yüklenemedi: " + SkySpritePath);
+                    return;
+                }
+            }
+
+            var go = new GameObject("Sky");
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sky;
+            sr.sortingOrder = -100;
+
+            var bg = go.AddComponent<SkyBackground>();
+            SerializedSet(bg, "targetCamera", cam);
         }
 
         // ---- Sıfır sürtünmeli fizik materyali (üret ya da yükle) ----
