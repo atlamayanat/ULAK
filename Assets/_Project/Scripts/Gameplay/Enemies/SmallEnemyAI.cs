@@ -44,17 +44,28 @@ namespace Ulak.Gameplay
         [Tooltip("Zemin/engel sayılan layer'lar (boşsa Ground'a bağlanır).")]
         [SerializeField] private LayerMask groundLayer;
 
+        [Header("Görünüm")]
+        [Tooltip("Sprite varsayılan olarak sağa mı bakıyor? (Aynalama yönünü belirler.)")]
+        [SerializeField] private bool spriteFacesRight = true;
+
         [Header("Temas hasarı")]
         [SerializeField] private int contactDamage = 1;
         [SerializeField] private float contactKnockback = 7f;
         [Tooltip("Aynı hedefe tekrar vurmadan önceki bekleme (sn).")]
         [SerializeField] private float contactCooldown = 0.8f;
+        [Tooltip("Vuruş animasyonu başladıktan ne kadar sonra hasar girer (sn) — animasyonla senkron.")]
+        [SerializeField] private float attackDamageDelay = 0.25f;
+        [Tooltip("Hasar anında hedef hâlâ bu mesafedeyse isabet (kaçarsan ıskalama!).")]
+        [SerializeField] private float attackHitRange = 1.6f;
 
         private Rigidbody2D _rb;
         private Health _health;
         private Knockback _knockback;
+        private SpriteFlipbook _flipbook;
+        private SpriteRenderer _sr;
         private Transform _player;
         private float _nextContactTime;
+        private float _attackBusyUntil; // savururken yerinde durur
         private float _nextJumpTime;
         private float _patrolFlipTime;
         private int _patrolDir = 1;
@@ -66,6 +77,8 @@ namespace Ulak.Gameplay
             _rb = GetComponent<Rigidbody2D>();
             _health = GetComponent<Health>();
             _knockback = GetComponent<Knockback>();
+            _flipbook = GetComponent<SpriteFlipbook>();
+            _sr = GetComponent<SpriteRenderer>();
 
             // Kendi kendine bağlanma: maske boş/her şey ise Ground'a daralt.
             if (groundLayer.value == 0 || groundLayer.value == -1)
@@ -91,6 +104,13 @@ namespace Ulak.Gameplay
             if (_knockback != null && _knockback.IsBeingKnockedBack) return; // savruluyorsa kontrolü bırak
 
             UpdateGrounded();
+
+            // Savurma sırasında dur — vuruş okunabilir olsun (kaçma fırsatı).
+            if (Time.time < _attackBusyUntil)
+            {
+                _rb.linearVelocity = new Vector2(0f, _rb.linearVelocity.y);
+                return;
+            }
 
             // --- Durum: kovala / devriye (histerezisli) ---
             float dx = 0f;
@@ -126,6 +146,9 @@ namespace Ulak.Gameplay
 
             _rb.linearVelocity = new Vector2(dir * speed, _rb.linearVelocity.y);
 
+            // Gittiği yöne bak (oyuncu arkasına geçince döner).
+            Face(dir);
+
             // --- Zıplama (cooldown'lu) ---
             if (_grounded && Time.time >= _nextJumpTime)
             {
@@ -136,6 +159,13 @@ namespace Ulak.Gameplay
                 if (wallAhead || playerAbove)
                     Jump();
             }
+        }
+
+        /// <summary>Sprite'ı verilen yatay yöne çevirir.</summary>
+        private void Face(float dirX)
+        {
+            if (_sr == null || Mathf.Approximately(dirX, 0f)) return;
+            _sr.flipX = spriteFacesRight ? dirX < 0f : dirX > 0f;
         }
 
         private void UpdateGrounded()
@@ -171,9 +201,30 @@ namespace Ulak.Gameplay
             if (dmg == null || !dmg.IsAlive) return;
 
             _nextContactTime = Time.time + contactCooldown;
+            _attackBusyUntil = Time.time + attackDamageDelay + 0.15f; // savurma boyunca dur
 
-            // Oyuncuyu düşmandan uzağa (geriye) savur.
-            float dirX = Mathf.Sign(other.transform.position.x - transform.position.x);
+            // Vurmadan önce hedefe dön (arkadan yaklaşan oyuncuya da döner).
+            Face(other.transform.position.x - transform.position.x);
+
+            // Animasyon başlar; hasar, vuruş karesine denk gelecek şekilde gecikmeli girer.
+            _flipbook?.PlayAttack();
+            StartCoroutine(DealDamageAfterWindup(other.transform));
+        }
+
+        private System.Collections.IEnumerator DealDamageAfterWindup(Transform target)
+        {
+            yield return new WaitForSeconds(attackDamageDelay);
+
+            if (!_health.IsAlive || target == null) yield break;
+
+            // Hedef savurma sırasında kaçtıysa ISKALAR.
+            if (Vector2.Distance(target.position, transform.position) > attackHitRange)
+                yield break;
+
+            var dmg = target.GetComponentInParent<IDamageable>();
+            if (dmg == null || !dmg.IsAlive) yield break;
+
+            float dirX = Mathf.Sign(target.position.x - transform.position.x);
             if (dirX == 0) dirX = -1f;
             Vector2 kb = new Vector2(dirX, 0.4f).normalized * contactKnockback;
 

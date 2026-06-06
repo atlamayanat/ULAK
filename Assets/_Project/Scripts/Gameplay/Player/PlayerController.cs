@@ -30,6 +30,14 @@ namespace Ulak.Gameplay
         [Tooltip("Yere değdikten sonra zıplamaya izin verilen tampon süre (coyote time).")]
         [SerializeField] private float coyoteTime = 0.1f;
 
+        [Header("Dash")]
+        [Tooltip("Atılma hızı (bakılan yöne).")]
+        [SerializeField] private float dashSpeed = 16f;
+        [Tooltip("Atılmanın sürdüğü süre (sn).")]
+        [SerializeField] private float dashDuration = 0.14f;
+        [Tooltip("İki atılma arası bekleme (sn).")]
+        [SerializeField] private float dashCooldown = 1f;
+
         private Rigidbody2D _rb;
         private Knockback _knockback;
         private SpriteFlipbook _flipbook;
@@ -37,6 +45,9 @@ namespace Ulak.Gameplay
         private float _lastGroundedTime;
         private bool _jumpQueued;
         private bool _jumpedSinceGrounded;
+        private bool _dashQueued;
+        private float _dashUntil;
+        private float _nextDashTime;
         private float _moveInput;
 
         public bool IsGrounded => _isGrounded;
@@ -76,6 +87,9 @@ namespace Ulak.Gameplay
 
             if (JumpPressedThisFrame())
                 _jumpQueued = true;
+
+            if (DashPressedThisFrame())
+                _dashQueued = true;
         }
 
         private void FixedUpdate()
@@ -83,6 +97,24 @@ namespace Ulak.Gameplay
             UpdateGrounded();
 
             bool locked = _knockback != null && _knockback.IsBeingKnockedBack;
+
+            // --- Dash: bakılan yöne kısa ve hızlı atılma (cooldown'lu) ---
+            bool dashing = Time.time < _dashUntil;
+            if (_dashQueued && !dashing && !locked && Time.time >= _nextDashTime)
+            {
+                _dashUntil = Time.time + dashDuration;
+                _nextDashTime = Time.time + dashCooldown;
+                dashing = true;
+            }
+            _dashQueued = false;
+
+            if (dashing && !locked)
+            {
+                // Düz çizgide atıl: dikey hız sıfır (havada da çalışır).
+                _rb.linearVelocity = new Vector2(FacingX * dashSpeed, 0f);
+                _jumpQueued = false;
+                return;
+            }
 
             if (!locked)
             {
@@ -126,6 +158,13 @@ namespace Ulak.Gameplay
                                       || kb.wKey.wasPressedThisFrame);
             bool pad = Gamepad.current != null && Gamepad.current.buttonSouth.wasPressedThisFrame;
             return key || pad;
+        }
+
+        private static bool DashPressedThisFrame()
+        {
+            bool mouse = Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
+            bool pad = Gamepad.current != null && Gamepad.current.rightShoulder.wasPressedThisFrame;
+            return mouse || pad;
         }
 
         private static float ReadMoveInput()

@@ -93,9 +93,9 @@ namespace Ulak.EditorTools
             EditorSceneManager.SaveScene(scene, scenePath);
 
             Debug.Log("[Ulak] Greybox yol sahnesi kuruldu → " + scenePath +
-                      "\nKontroller: A/D-ok = hareket, Space/W/yukarı = zıpla, Sağ tık = saldırı, H = can yenile (3 yük).");
+                      "\nKontroller: A/D-ok = hareket, Space/W/yukarı = zıpla, Sol tık = saldırı, Sağ tık = dash, H = can yenile (3 yük).");
             EditorUtility.DisplayDialog("Ulak",
-                "Greybox yol sahnesi kuruldu.\n\nKontroller:\n• A/D veya ok tuşları → hareket\n• Space / W / yukarı ok → zıpla\n• Sağ tık → kılıç saldırısı\n• H → can yenile (3 yük gerekir)\n\nPlay'e bas ve test et.",
+                "Greybox yol sahnesi kuruldu.\n\nKontroller:\n• A/D veya ok tuşları → hareket\n• Space / W / yukarı ok → zıpla\n• Sol tık → kılıç saldırısı\n• Sağ tık → dash (1 sn bekleme)\n• H → can yenile (3 yük gerekir)\n\nPlay'e bas ve test et.",
                 "Tamam");
         }
 
@@ -116,7 +116,7 @@ namespace Ulak.EditorTools
             BuildDayCore();
 
             EditorUtility.DisplayDialog("Ulak",
-                "Gündüz at sahnesi kuruldu.\n\n• At otomatik koşar ve giderek hızlanır\n• 2 blokluk hendeklerden zıplayarak aş (Space/W/yukarı)\n• Boşluklara düşersen ÖLÜRSÜN — sahne baştan başlar\n• Sağ tık → kılıçla altın kutuları kır (+10 puan)\n\nPlay'e bas ve test et.",
+                "Gündüz at sahnesi kuruldu.\n\n• At otomatik koşar ve giderek hızlanır\n• 2 blokluk hendeklerden zıplayarak aş (Space/W/yukarı)\n• Boşluklara düşersen ÖLÜRSÜN — sahne baştan başlar\n• Sol tık → kılıçla altın kutuları kır (+10 puan)\n\nPlay'e bas ve test et.",
                 "Tamam");
         }
 
@@ -727,7 +727,86 @@ namespace Ulak.EditorTools
             SerializedSet(ai, "contactKnockback", 12f);
             SerializedSet(ai, "jumpForce", 7f);
             go.AddComponent<EnemyDeath>();
+            ApplyTepegozVisual(go);
             return go;
+        }
+
+        // ---- Tepegöz görsellerini bir objeye uygula (küpten gerçek modele) ----
+        private static bool ApplyTepegozVisual(GameObject go)
+        {
+            Sprite idle = GetOrCreateSprite(
+                "Assets/_Project/Art/Characters/Enemies/tepegoz_idle.png", 40f);
+            Sprite[] walk = GetOrCreateSheetSprites(
+                "Assets/_Project/Art/Characters/Enemies/tepegoz_yurume.png", 128, 64, 40f, "tepegoz_walk");
+            Sprite[] atk = GetOrCreateSheetSprites(
+                "Assets/_Project/Art/Characters/Enemies/tepegoz_dovus.png", 128, 64, 40f, "tepegoz_atk");
+            if (idle == null) return false;
+
+            go.transform.localScale = Vector3.one; // küp ölçeği bırak (64px @40ppu = 1.6 boy)
+
+            var sr = go.GetComponent<SpriteRenderer>();
+            sr.sprite = idle;
+            sr.color = Color.white;
+
+            var col = go.GetComponent<BoxCollider2D>();
+            if (col != null)
+            {
+                col.size = new Vector2(1.65f, 1.6f); // gövdeye göre (kare kenar boşlukları hariç)
+                col.offset = Vector2.zero;
+            }
+
+            var book = go.GetComponent<SpriteFlipbook>();
+            if (book == null) book = go.AddComponent<SpriteFlipbook>();
+            if (walk != null && walk.Length >= 2)
+            {
+                SerializedSet(book, "frames", walk);          // ağır aksak yürüyüş
+                SerializedSet(book, "frameInterval", 0.55f);  // hantal tempo
+            }
+            if (atk != null && atk.Length >= 2)
+            {
+                SerializedSet(book, "attackFrames", atk);     // temas vuruşunda oynar
+                SerializedSet(book, "attackFrameInterval", 0.3f); // çok ağır yumruk (3 kare = 0.9 sn)
+            }
+
+            // Can barı iri gövdenin üstüne çıksın.
+            var bar = go.GetComponent<HealthBar>();
+            if (bar != null) SerializedSet(bar, "offset", new Vector2(0f, 1.05f));
+
+            // Tepegöz görseli doğal olarak SOLA bakıyor + ağır vuruş zamanlaması:
+            // animasyon 0.9 sn, hasar 0.6. sn'de (3. karede) girer, 2.2 sn'de bir saldırır.
+            var aiComp = go.GetComponent<SmallEnemyAI>();
+            if (aiComp != null)
+            {
+                SerializedSet(aiComp, "spriteFacesRight", false);
+                SerializedSet(aiComp, "contactCooldown", 2.2f);
+                SerializedSet(aiComp, "attackDamageDelay", 0.6f);
+                SerializedSet(aiComp, "attackHitRange", 2.2f);
+            }
+
+            return true;
+        }
+
+        // ---- Sahnedeki TÜM Tepegöz küplerini gerçek modele çevir (additive) ----
+        public static string ApplyTepegozArtToScene()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("Road_Greybox"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(NightScenePath);
+            }
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            int n = 0;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                if (!root.name.StartsWith("Tepegoz")) continue;
+                if (ApplyTepegozVisual(root)) n++;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "modele cevrilen Tepegoz: " + n;
         }
 
         private static GameObject SpawnMerkut(Vector2 pos, Sprite sq, PhysicsMaterial2D nf)
@@ -871,6 +950,135 @@ namespace Ulak.EditorTools
             col.size = Vector2.one;
 
             go.AddComponent<TiledBoxSync>();
+        }
+
+        // ---- Flamaları animasyonlu hale getir (additive) ----
+        // 96x48 flama sheet'leri = yan yana 2 dalgalanma karesi. Tek sprite
+        // olarak duranları dilimleyip SpriteFlipbook ile dalgalandırır;
+        // Animator denemelerini kaldırır. Ülgen flaması ulgen_koy'a eklenir.
+        public static string FixFlamas()
+        {
+            EditorSceneManager.SaveOpenScenes();
+
+            // 1) Üç flamayı da dilimle (2x 48x48, ppu 32 → 1.5 birim).
+            var flamaFrames = new System.Collections.Generic.Dictionary<string, Sprite[]>();
+            foreach (var name in new[] { "umayflama", "ulgenflama", "erlikflama" })
+            {
+                var frames = GetOrCreateSheetSprites(
+                    $"Assets/_Project/Art/Environment/Village/{name}.png", 48, 48, 32f, name);
+                if (frames != null && frames.Length >= 2)
+                    flamaFrames[name] = frames;
+            }
+            if (flamaFrames.Count == 0) return "flama dilimlenemedi";
+
+            var log = new System.Text.StringBuilder();
+
+            // 2) UmayKoy: yerleştirilmiş tek-sprite flamaları animasyonlu yap.
+            var scene = EditorSceneManager.OpenScene(UmayKoyScenePath);
+            int fixedCount = 0;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                foreach (var sr in root.GetComponentsInChildren<SpriteRenderer>(true))
+                {
+                    if (sr.sprite == null) continue;
+                    string tex = sr.sprite.texture != null ? sr.sprite.texture.name : "";
+                    if (!flamaFrames.ContainsKey(tex)) continue;
+
+                    var frames = flamaFrames[tex];
+                    sr.sprite = frames[0];
+
+                    // Animator denemesi varsa kaldır (flipbook ile çakışmasın).
+                    var animator = sr.GetComponent<Animator>();
+                    if (animator != null) Object.DestroyImmediate(animator);
+
+                    var book = sr.GetComponent<SpriteFlipbook>();
+                    if (book == null) book = sr.gameObject.AddComponent<SpriteFlipbook>();
+                    SerializedSet(book, "frames", frames);
+                    SerializedSet(book, "frameInterval", 0.4f); // dalgalanma temposu
+                    fixedCount++;
+                }
+            }
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            log.Append("UmayKoy duzeltilen=").Append(fixedCount).Append(" ");
+
+            // 3) ulgen_koy: Ülgen flaması yoksa animasyonlu olarak ekle.
+            if (flamaFrames.ContainsKey("ulgenflama"))
+            {
+                scene = EditorSceneManager.OpenScene("Assets/_Project/Scenes/ulgen_koy.unity");
+                if (GameObject.Find("UlgenFlama") == null)
+                {
+                    var temsilci = GameObject.Find("UlgenTemsilcisi");
+                    float x = temsilci != null ? temsilci.transform.position.x - 2f : -12f;
+                    float y = temsilci != null ? temsilci.transform.position.y + 1.5f : 0f;
+
+                    var go = new GameObject("UlgenFlama");
+                    go.transform.position = new Vector3(x, y, 0f);
+                    var fsr = go.AddComponent<SpriteRenderer>();
+                    fsr.sprite = flamaFrames["ulgenflama"][0];
+                    fsr.sortingOrder = 8;
+                    var book = go.AddComponent<SpriteFlipbook>();
+                    SerializedSet(book, "frames", flamaFrames["ulgenflama"]);
+                    SerializedSet(book, "frameInterval", 0.4f);
+                    log.Append("UlgenFlama eklendi ");
+                }
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene);
+            }
+
+            return log.ToString();
+        }
+
+        // ---- Ağaçları Umay Köy sahnesine serpiştir (additive) ----
+        // Her ağaç tipinin tabanı, görselin saydam kenar payı hesaplanarak
+        // zemin çizgisine (-2.5) tam oturtulur. "Trees" grubu altında toplanır.
+        public static string PlaceTrees()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("UmayKoy"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(UmayKoyScenePath);
+            }
+
+            // tip: (dosya, ppu=55 ile içerik tabanının sprite merkezine uzaklığı)
+            (string path, float bottomOffset)[] types =
+            {
+                ("Assets/_Project/Art/Environment/Trees/agac1.png", 1.42f),
+                ("Assets/_Project/Art/Environment/Trees/agac2.png", 1.73f),
+                ("Assets/_Project/Art/Environment/Trees/agac3.png", 1.69f),
+                ("Assets/_Project/Art/Environment/Trees/agac4.png", 2.07f),
+            };
+
+            var sprites = new Sprite[types.Length];
+            for (int i = 0; i < types.Length; i++)
+                sprites[i] = GetOrCreateSprite(types[i].path, 55f);
+
+            // Eski grubu kaldır (yeniden çalıştırılabilir).
+            var oldGroup = GameObject.Find("Trees");
+            if (oldGroup != null) Object.DestroyImmediate(oldGroup);
+            var group = new GameObject("Trees");
+
+            float[] xs = { -16f, -9f, -3f, 15f, 24f, 37f, 50f };
+            int made = 0;
+            for (int i = 0; i < xs.Length; i++)
+            {
+                int t = i % types.Length;
+                if (sprites[t] == null) continue;
+
+                var go = new GameObject("Tree_" + i);
+                go.transform.SetParent(group.transform);
+                go.transform.position = new Vector3(xs[i], -2.5f + types[t].bottomOffset, 0f);
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = sprites[t];
+                sr.sortingOrder = 0; // çadırların arkasında, dağların önünde
+                made++;
+            }
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "eklenen agac: " + made;
         }
 
         // ---- Dağ arka planını Umay Köy sahnesine additive ekle ----

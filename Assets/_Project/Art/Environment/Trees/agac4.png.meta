@@ -1,13 +1,10 @@
 fileFormatVersion: 2
-guid: aa03233bedd02f2418dc3b2ca843fc3e
+guid: 1c822c6d54bc9f64c8f03d8052782e93
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: -6759416068745121315
-    second: ulgenflama_0
-  - first:
-      213: -6650501000731934882
-    second: ulgenflama_1
+      213: -1672456842160781054
+    second: agac4_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -49,12 +46,12 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 2
+  spriteMode: 1
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 32
+  spritePixelsToUnits: 55
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -116,45 +113,23 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: ulgenflama_0
+      name: agac4_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 48
-        height: 48
+        x: 168
+        y: 135
+        width: 170
+        height: 226
       alignment: 0
-      pivot: {x: 0.5, y: 0.5}
+      pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: 0
+      tessellationDetail: -1
       bones: []
-      spriteID: fb5d28bf6abc6e047834faeebb55ab3f
-      internalID: -6759416068745121315
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: ulgenflama_1
-      rect:
-        serializedVersion: 2
-        x: 48
-        y: 0
-        width: 48
-        height: 48
-      alignment: 0
-      pivot: {x: 0.5, y: 0.5}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: 0
-      bones: []
-      spriteID: 7244c99e1795ca949b9e760c8fdd69f1
-      internalID: -6650501000731934882
+      spriteID: 209c5d4fc5d3ac8e0800000000000000
+      internalID: -1672456842160781054
       vertices: []
       indices: 
       edges: []
@@ -173,8 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      ulgenflama_0: -6759416068745121315
-      ulgenflama_1: -6650501000731934882
+      agac4_0: -1672456842160781054
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

@@ -6,7 +6,7 @@ namespace Ulak.Gameplay
 {
     /// <summary>
     /// Kılıç saldırısı (greybox v1):
-    ///  - Girdi: sağ tık (plan kararı) / gamepad batı.
+    ///  - Girdi: sol tık / gamepad batı. (Sağ tık dash'e ayrıldı.)
     ///  - Bakılan yönde kutu hitbox açar; menzildeki IDamageable'lara hasar + knockback.
     ///  - Cooldown ile spam engellenir (ritim hissi).
     ///
@@ -113,7 +113,7 @@ namespace Ulak.Gameplay
 
         private static bool AttackPressedThisFrame()
         {
-            bool mouse = Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame;
+            bool mouse = Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
             bool pad = Gamepad.current != null && Gamepad.current.buttonWest.wasPressedThisFrame;
             return mouse || pad;
         }
