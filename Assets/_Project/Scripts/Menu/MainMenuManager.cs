@@ -10,7 +10,7 @@ public class MainMenuManager : MonoBehaviour
         MainMenu,
         GameScene,
         CreditsMenu,
-        Road_Day_Greybox
+        UmayKoy
     }
 
     [Header("Sahne Ayarları")]

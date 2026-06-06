@@ -5,7 +5,7 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 8c9cfa26abfee488c85f1582747f6a02
   - enabled: 1
@@ -20,6 +20,18 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/_Project/Scenes/UmayKoy.unity
     guid: 422e4c919a89e5640871a0126ec20c1a
+  - enabled: 1
+    path: Assets/Scenes/BossFightArea.unity
+    guid: fd7f965ba310a054f8ede2fb34f202c0
+  - enabled: 1
+    path: Assets/_Project/Scenes/ulgen_koy.unity
+    guid: fdfa10b32d8e1424a887d6c09b2c7f0c
+  - enabled: 1
+    path: Assets/Scenes/BaslangicIntro.unity
+    guid: 93a379c135f9d36428a37523bc375779
+  - enabled: 1
+    path: Assets/_Project/Scenes/erlik_koy.unity
+    guid: f235c538d6c23344dad3c58904a6543a
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
