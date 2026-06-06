@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 036f1fe96a751e54e880b82783eb5cdb
+guid: 46191cff2d3b7554b8a4c0552d3c495f
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 7678288414824293154
-    second: direk_0
+      213: 6281344552099686376
+    second: ulgen_temsilcisi_idle_1_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -51,7 +51,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 48
+  spritePixelsToUnits: 32
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: direk_0
+      name: ulgen_temsilcisi_idle_1_0
       rect:
         serializedVersion: 2
-        x: 9
-        y: 0
-        width: 30
-        height: 148
+        x: 16
+        y: 2
+        width: 27
+        height: 52
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 2236998c1a2ce8a60800000000000000
-      internalID: 7678288414824293154
+      spriteID: 8e7acb31791db2750800000000000000
+      internalID: 6281344552099686376
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      direk_0: 7678288414824293154
+      ulgen_temsilcisi_idle_1_0: 6281344552099686376
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

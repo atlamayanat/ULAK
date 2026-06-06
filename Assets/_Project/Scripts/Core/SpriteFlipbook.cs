@@ -23,10 +23,18 @@ namespace Ulak.Core
         [Tooltip("Yürüme kareleri arası süre (sn) — adım temposu.")]
         [SerializeField] private float walkFrameInterval = 0.18f;
 
+        [Header("Saldırı (opsiyonel)")]
+        [Tooltip("Saldırıda BİR KEZ oynatılacak kareler (PlayAttack ile tetiklenir).")]
+        [SerializeField] private Sprite[] attackFrames;
+        [Tooltip("Saldırı kareleri arası süre (sn).")]
+        [SerializeField] private float attackFrameInterval = 0.1f;
+
         private SpriteRenderer _sr;
         private float _timer;
         private int _index;
         private bool _moving;
+        private int _attackIndex = -1; // -1 = saldırı oynamıyor
+        private float _attackTimer;
 
         private Sprite[] ActiveFrames =>
             _moving && walkFrames != null && walkFrames.Length > 0 ? walkFrames : frames;
@@ -42,6 +50,27 @@ namespace Ulak.Core
 
         private void Update()
         {
+            // Saldırı animasyonu önceliklidir: bir kez oynar, sonra normale döner.
+            if (_attackIndex >= 0)
+            {
+                _attackTimer += Time.deltaTime;
+                if (_attackTimer >= attackFrameInterval)
+                {
+                    _attackTimer -= attackFrameInterval;
+                    _attackIndex++;
+                    if (_attackIndex >= attackFrames.Length)
+                    {
+                        _attackIndex = -1; // bitti → normal akışa dön
+                        ShowFrame(0);
+                    }
+                    else
+                    {
+                        _sr.sprite = attackFrames[_attackIndex];
+                    }
+                }
+                return;
+            }
+
             var set = ActiveFrames;
             if (set == null || set.Length < 2) return;
 
@@ -50,6 +79,15 @@ namespace Ulak.Core
 
             _timer -= ActiveInterval;
             ShowFrame(_index + 1);
+        }
+
+        /// <summary>Saldırı karelerini baştan bir kez oynatır (varsa).</summary>
+        public void PlayAttack()
+        {
+            if (attackFrames == null || attackFrames.Length == 0) return;
+            _attackIndex = 0;
+            _attackTimer = 0f;
+            _sr.sprite = attackFrames[0];
         }
 
         /// <summary>Yürüme/idle seti arasında geçiş yapar.</summary>

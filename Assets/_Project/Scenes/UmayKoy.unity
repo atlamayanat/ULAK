@@ -809,10 +809,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ulak.Core.SpriteFlipbook
   frames:
-  - {fileID: 21300000, guid: 9745d02488fc74344bd6ed160da6a7a0, type: 3}
-  - {fileID: 21300000, guid: fbfaa8c16a038824788a38f8b95dc6d5, type: 3}
+  - {fileID: 21300000, guid: dc4b71097a5812a42a90e0092c355b0e, type: 3}
+  - {fileID: 21300000, guid: 3526fe69e7cc39d48bda2b930e1ae09e, type: 3}
   frameInterval: 0.45
-  walkFrames: []
+  walkFrames:
+  - {fileID: 2215745761463138581, guid: 8f1c81620d92e08459943c5a68f1df5e, type: 3}
+  - {fileID: 1700766857389022521, guid: 8f1c81620d92e08459943c5a68f1df5e, type: 3}
   walkFrameInterval: 0.18
 --- !u!212 &906437749
 SpriteRenderer:
@@ -863,7 +865,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 10
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 9745d02488fc74344bd6ed160da6a7a0, type: 3}
+  m_Sprite: {fileID: 21300000, guid: dc4b71097a5812a42a90e0092c355b0e, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0

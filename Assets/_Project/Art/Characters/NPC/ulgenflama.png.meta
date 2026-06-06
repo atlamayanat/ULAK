@@ -1,10 +1,13 @@
 fileFormatVersion: 2
-guid: 036f1fe96a751e54e880b82783eb5cdb
+guid: 8efc6fc43e796114cbfb1328cb9180dc
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 7678288414824293154
-    second: direk_0
+      213: -6759416068745121315
+    second: ulgenflama_0
+  - first:
+      213: -6650501000731934882
+    second: ulgenflama_1
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -37,7 +40,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 0
+    filterMode: 1
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -46,12 +49,12 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 48
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -75,7 +78,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 0
+    textureCompression: 1
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -113,13 +116,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: direk_0
+      name: ulgenflama_0
       rect:
         serializedVersion: 2
-        x: 9
-        y: 0
-        width: 30
-        height: 148
+        x: 0
+        y: 8
+        width: 47
+        height: 32
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +131,30 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 2236998c1a2ce8a60800000000000000
-      internalID: 7678288414824293154
+      spriteID: dd1316df5eab132a0800000000000000
+      internalID: -6759416068745121315
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: ulgenflama_1
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 8
+        width: 45
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e5f3ef0639ca4b3a0800000000000000
+      internalID: -6650501000731934882
       vertices: []
       indices: 
       edges: []
@@ -138,7 +163,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -148,7 +173,8 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      direk_0: 7678288414824293154
+      ulgenflama_0: -6759416068745121315
+      ulgenflama_1: -6650501000731934882
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

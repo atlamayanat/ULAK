@@ -1,10 +1,10 @@
 fileFormatVersion: 2
-guid: 036f1fe96a751e54e880b82783eb5cdb
+guid: a49d617e2ff50b6468117e9c0c100481
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 7678288414824293154
-    second: direk_0
+      213: -7481682609058754154
+    second: cadir_yikilmis4_0
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -113,13 +113,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: direk_0
+      name: cadir_yikilmis4_0
       rect:
         serializedVersion: 2
-        x: 9
+        x: 24
         y: 0
-        width: 30
-        height: 148
+        width: 212
+        height: 122
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -128,8 +128,8 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 2236998c1a2ce8a60800000000000000
-      internalID: 7678288414824293154
+      spriteID: 691d5d48e49bb2890800000000000000
+      internalID: -7481682609058754154
       vertices: []
       indices: 
       edges: []
@@ -148,7 +148,7 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      direk_0: 7678288414824293154
+      cadir_yikilmis4_0: -7481682609058754154
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

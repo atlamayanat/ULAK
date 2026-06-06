@@ -38,12 +38,14 @@ namespace Ulak.Gameplay
 
         private float _nextReadyTime;
         private PlayerController _pc;
+        private SpriteFlipbook _flipbook;
         // OverlapBox alloc'suz tarama için tampon.
         private readonly Collider2D[] _hits = new Collider2D[8];
 
         private void Awake()
         {
             _pc = GetComponent<PlayerController>();
+            _flipbook = GetComponent<SpriteFlipbook>();
 
             // Kendi kendine bağlanma: maske "her şey" kalmışsa Enemy layer'a daralt.
             if (targetLayers.value == -1 || targetLayers.value == 0)
@@ -64,6 +66,7 @@ namespace Ulak.Gameplay
         private void DoAttack()
         {
             _nextReadyTime = Time.time + cooldown;
+            _flipbook?.PlayAttack(); // savurma animasyonu (varsa)
 
             float face = Facing;
             Vector2 center = (Vector2)transform.position

@@ -5592,6 +5592,11 @@ MonoBehaviour:
   - {fileID: 2215745761463138581, guid: 8f1c81620d92e08459943c5a68f1df5e, type: 3}
   - {fileID: 1700766857389022521, guid: 8f1c81620d92e08459943c5a68f1df5e, type: 3}
   walkFrameInterval: 0.18
+  attackFrames:
+  - {fileID: -8403806705498589453, guid: e9ae48ce6caa7ff4da857d36bf620431, type: 3}
+  - {fileID: -4700962206925797956, guid: e9ae48ce6caa7ff4da857d36bf620431, type: 3}
+  - {fileID: -2858461255669054906, guid: e9ae48ce6caa7ff4da857d36bf620431, type: 3}
+  attackFrameInterval: 0.1
 --- !u!212 &480075646
 SpriteRenderer:
   serializedVersion: 2
