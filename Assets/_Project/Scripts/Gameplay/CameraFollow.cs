@@ -16,6 +16,16 @@ namespace Ulak.Gameplay
 
         private Vector3 _velocity;
 
+        private void Start()
+        {
+            // Kendi kendine bağlanma: editor wiring'i boş kalsa bile oyuncuyu bul.
+            if (target == null)
+            {
+                var p = GameObject.FindGameObjectWithTag("Player");
+                if (p != null) target = p.transform;
+            }
+        }
+
         private void LateUpdate()
         {
             if (target == null) return;

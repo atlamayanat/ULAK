@@ -36,6 +36,7 @@ namespace Ulak.Gameplay
         private bool _isGrounded;
         private float _lastGroundedTime;
         private bool _jumpQueued;
+        private bool _jumpedSinceGrounded;
         private float _moveInput;
 
         public bool IsGrounded => _isGrounded;
@@ -48,6 +49,20 @@ namespace Ulak.Gameplay
             _rb = GetComponent<Rigidbody2D>();
             _knockback = GetComponent<Knockback>();
             _flipbook = GetComponent<SpriteFlipbook>();
+
+            // --- Kendi kendine bağlanma (editor wiring'i boş kalsa bile çalış) ---
+            if (groundCheck == null)
+            {
+                var t = transform.Find("GroundCheck");
+                if (t != null) groundCheck = t;
+            }
+            // "Her şey" maskesi kendi collider'ımızı zemin sayar → sınırsız zıplama.
+            // Ground layer'a daralt.
+            if (groundLayer.value == -1 || groundLayer.value == 0)
+            {
+                int g = LayerMask.NameToLayer("Ground");
+                if (g >= 0) groundLayer = 1 << g;
+            }
         }
 
         private void Update()
@@ -57,6 +72,7 @@ namespace Ulak.Gameplay
             if (_moveInput > 0.01f) FacingX = 1;
             else if (_moveInput < -0.01f) FacingX = -1;
             _flipbook?.SetFacing(FacingX);
+            _flipbook?.SetMoving(Mathf.Abs(_moveInput) > 0.01f);
 
             if (JumpPressedThisFrame())
                 _jumpQueued = true;
@@ -74,12 +90,13 @@ namespace Ulak.Gameplay
                 _rb.linearVelocity = new Vector2(_moveInput * runSpeed, _rb.linearVelocity.y);
             }
 
-            bool canJump = Time.time - _lastGroundedTime <= coyoteTime;
+            // Zıplama: yerden (coyote payıyla) VE bu yere inişten beri zıplanmadıysa.
+            bool canJump = Time.time - _lastGroundedTime <= coyoteTime && !_jumpedSinceGrounded;
             if (_jumpQueued && canJump && !locked)
             {
                 _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, 0f);
                 _rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
-                _lastGroundedTime = -999f; // çift zıplamayı engelle
+                _jumpedSinceGrounded = true; // yere değene kadar tekrar zıplama yok
             }
             _jumpQueued = false;
         }
@@ -92,7 +109,13 @@ namespace Ulak.Gameplay
 
             _isGrounded = Physics2D.OverlapCircle(point, groundCheckRadius, groundLayer);
             if (_isGrounded)
+            {
                 _lastGroundedTime = Time.time;
+                // Yükselirken (zıplamanın hemen başında) hâlâ zemine yakınız —
+                // bayrağı ancak düşerken/dururken sıfırla ki spam çift zıplatmasın.
+                if (_rb.linearVelocity.y <= 0.01f)
+                    _jumpedSinceGrounded = false;
+            }
         }
 
         private static bool JumpPressedThisFrame()

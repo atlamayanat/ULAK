@@ -44,6 +44,13 @@ namespace Ulak.Gameplay
         private void Awake()
         {
             _pc = GetComponent<PlayerController>();
+
+            // Kendi kendine bağlanma: maske "her şey" kalmışsa Enemy layer'a daralt.
+            if (targetLayers.value == -1 || targetLayers.value == 0)
+            {
+                int e = LayerMask.NameToLayer("Enemy");
+                if (e >= 0) targetLayers = 1 << e;
+            }
         }
 
         private void Update()
@@ -82,7 +89,16 @@ namespace Ulak.Gameplay
             }
 
             if (slashVisual != null)
+            {
+                // Savurma efektini bakılan yöne konumlandır ve aynala.
+                slashVisual.transform.localPosition =
+                    new Vector3(hitboxOffset.x * face, hitboxOffset.y, 0f);
+                var vsr = slashVisual.GetComponent<SpriteRenderer>();
+                if (vsr != null) vsr.flipX = face < 0;
+
+                StopAllCoroutines(); // üst üste saldırıda eski kapanışı iptal et
                 StartCoroutine(ShowSlash());
+            }
         }
 
         private System.Collections.IEnumerator ShowSlash()

@@ -1,5 +1,8 @@
+using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
+using UnityEditor.U2D.Sprites;
 using UnityEngine;
 using Ulak.Core;
 using Ulak.Gameplay;
@@ -17,6 +20,9 @@ namespace Ulak.EditorTools
         private const string SkySpritePath = "Assets/_Project/Art/Background/gokyuzu.png";
         private const string PlayerIdle0Path = "Assets/_Project/Art/Characters/Player/player_idle_0.png";
         private const string PlayerIdle1Path = "Assets/_Project/Art/Characters/Player/player_idle_1.png";
+        private const string PlayerWalkPath = "Assets/_Project/Art/Characters/Player/player_walk.png";
+        private const string SlashArcPath = "Assets/_Project/Art/VFX/slash_arc.png";
+        private const string EngelPath = "Assets/_Project/Art/Environment/engel.jpeg";
         private const string PhysMatPath = "Assets/_Project/Art/Greybox/NoFriction.physicsMaterial2D";
         private const int GroundLayer = 6;
         private const int EnemyLayer = 7;
@@ -48,8 +54,12 @@ namespace Ulak.EditorTools
                 new Color(0.35f, 0.3f, 0.25f), sq, GroundLayer, isStatic: true);
 
             // --- Zıplanacak engel (alçak duvar / basamak) ---
+            // Kaplama: engel.jpeg (taş dokusu). Yoksa gri kutuya düşer.
+            // 52 ppu → ~1x1 dünya birimi; kutu ölçeğiyle 1 x 1.5'e esner.
+            Sprite engel = GetOrCreateSprite(EngelPath, 52f);
             MakeBox("Obstacle_Step", new Vector2(8f, -2.25f), new Vector2(1f, 1.5f),
-                new Color(0.5f, 0.42f, 0.3f), sq, GroundLayer, isStatic: true);
+                engel != null ? Color.white : new Color(0.5f, 0.42f, 0.3f),
+                engel != null ? engel : sq, GroundLayer, isStatic: true);
 
             // --- Çarpılacak yüksek duvar (auto-run burada durur) ---
             MakeBox("Wall", new Vector2(32f, -1.5f), new Vector2(1f, 4f),
@@ -75,9 +85,9 @@ namespace Ulak.EditorTools
             EditorSceneManager.SaveScene(scene, scenePath);
 
             Debug.Log("[Ulak] Greybox yol sahnesi kuruldu → " + scenePath +
-                      "\nKontroller: Sağ tık = saldırı, Space = zıpla. Oto-koşu sağa.");
+                      "\nKontroller: A/D-ok = hareket, Space/W/yukarı = zıpla, Sağ tık = saldırı, H = can yenile (3 yük).");
             EditorUtility.DisplayDialog("Ulak",
-                "Greybox yol sahnesi kuruldu.\n\nKontroller:\n• Sağ tık → kılıç saldırısı\n• Space → zıpla\n• Oto-koşu otomatik (sağa)\n\nPlay'e bas ve test et.",
+                "Greybox yol sahnesi kuruldu.\n\nKontroller:\n• A/D veya ok tuşları → hareket\n• Space / W / yukarı ok → zıpla\n• Sağ tık → kılıç saldırısı\n• H → can yenile (3 yük gerekir)\n\nPlay'e bas ve test et.",
                 "Tamam");
         }
 
@@ -101,12 +111,12 @@ namespace Ulak.EditorTools
             if (hasArt && idle1 != null)
             {
                 var book = go.AddComponent<SpriteFlipbook>();
-                var so = new SerializedObject(book);
-                var fr = so.FindProperty("frames");
-                fr.arraySize = 2;
-                fr.GetArrayElementAtIndex(0).objectReferenceValue = idle0;
-                fr.GetArrayElementAtIndex(1).objectReferenceValue = idle1;
-                so.ApplyModifiedProperties();
+                SerializedSet(book, "frames", new[] { idle0, idle1 });
+
+                // Yürüme kareleri (2'li sprite sheet'ten dilimlenir)
+                Sprite[] walk = GetOrCreateWalkSprites();
+                if (walk != null && walk.Length >= 2)
+                    SerializedSet(book, "walkFrames", walk);
             }
 
             var rb = go.AddComponent<Rigidbody2D>();
@@ -143,7 +153,22 @@ namespace Ulak.EditorTools
             var atk = go.AddComponent<SwordAttack>();
             SerializedSet(atk, "targetLayers", (LayerMask)(1 << EnemyLayer));
 
+            // Kılıç savurma efekti (hilal yay — saldırı anında kısa süre parlar)
+            Sprite slashSprite = GetOrCreateCharacterSprite(SlashArcPath);
+            if (slashSprite != null)
+            {
+                var slash = new GameObject("SlashVisual");
+                slash.transform.SetParent(go.transform, false);
+                slash.transform.localPosition = new Vector3(0.9f, 0f, 0f);
+                var ssr = slash.AddComponent<SpriteRenderer>();
+                ssr.sprite = slashSprite;
+                ssr.sortingOrder = 12; // karakterin önünde
+                slash.SetActive(false);
+                SerializedSet(atk, "slashVisual", slash);
+            }
+
             go.AddComponent<PlayerRespawn>();
+            go.AddComponent<KillCharges>(); // can basma mekaniği (sol üst sayaç + H ile yenile)
 
             return go;
         }
@@ -220,23 +245,27 @@ namespace Ulak.EditorTools
             return AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
         }
 
-        // ---- Karakter sprite'ı: pixel-art importer ayarlarıyla yükle ----
-        private static Sprite GetOrCreateCharacterSprite(string path)
+        // ---- Tek sprite: pixel-art importer ayarlarıyla yükle ----
+        private static Sprite GetOrCreateCharacterSprite(string path) => GetOrCreateSprite(path, 32f);
+
+        private static Sprite GetOrCreateSprite(string path, float ppu)
         {
             var imp = AssetImporter.GetAtPath(path) as TextureImporter;
             if (imp == null)
             {
-                Debug.LogWarning("[Ulak] Karakter görseli bulunamadı: " + path);
+                Debug.LogWarning("[Ulak] Görsel bulunamadı: " + path);
                 return null;
             }
 
             // Pixel-art için doğru ayarlar (idempotent — değişmişse güncelle).
             if (imp.textureType != TextureImporterType.Sprite ||
-                !Mathf.Approximately(imp.spritePixelsPerUnit, 32f) ||
+                imp.spriteImportMode != SpriteImportMode.Single ||
+                !Mathf.Approximately(imp.spritePixelsPerUnit, ppu) ||
                 imp.filterMode != FilterMode.Point)
             {
                 imp.textureType = TextureImporterType.Sprite;
-                imp.spritePixelsPerUnit = 32f; // 32x48 px → 1 x 1.5 dünya birimi
+                imp.spriteImportMode = SpriteImportMode.Single; // şablon varsayılanı Multiple+auto-slice yapabiliyor
+                imp.spritePixelsPerUnit = ppu;
                 imp.filterMode = FilterMode.Point;
                 imp.textureCompression = TextureImporterCompression.Uncompressed;
                 imp.mipmapEnabled = false;
@@ -244,6 +273,68 @@ namespace Ulak.EditorTools
             }
 
             return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        // ---- Yürüme kareleri: 128x48 sheet'i 2 adet 64x48 kareye dilimle ----
+        private static Sprite[] GetOrCreateWalkSprites()
+        {
+            var imp = AssetImporter.GetAtPath(PlayerWalkPath) as TextureImporter;
+            if (imp == null)
+            {
+                Debug.LogWarning("[Ulak] Yürüme sheet'i bulunamadı: " + PlayerWalkPath);
+                return null;
+            }
+
+            bool needsSetup = imp.textureType != TextureImporterType.Sprite
+                              || imp.spriteImportMode != SpriteImportMode.Multiple
+                              || !Mathf.Approximately(imp.spritePixelsPerUnit, 32f);
+            if (needsSetup)
+            {
+                imp.textureType = TextureImporterType.Sprite;
+                imp.spriteImportMode = SpriteImportMode.Multiple;
+                imp.spritePixelsPerUnit = 32f;
+                imp.filterMode = FilterMode.Point;
+                imp.textureCompression = TextureImporterCompression.Uncompressed;
+                imp.mipmapEnabled = false;
+
+                // Modern dilimleme API'si (ISpriteEditorDataProvider).
+                var factory = new SpriteDataProviderFactories();
+                factory.Init();
+                var dp = factory.GetSpriteEditorDataProviderFromObject(imp);
+                dp.InitSpriteEditorDataProvider();
+
+                var rects = new SpriteRect[2];
+                for (int i = 0; i < 2; i++)
+                {
+                    rects[i] = new SpriteRect
+                    {
+                        name = "player_walk_" + i,
+                        rect = new Rect(i * 64, 0, 64, 48),
+                        alignment = SpriteAlignment.Center,
+                        pivot = new Vector2(0.5f, 0.5f),
+                        spriteID = GUID.Generate()
+                    };
+                }
+                dp.SetSpriteRects(rects);
+
+                // Unity 2021.2+ isim ↔ fileId eşlemesi ister.
+                var nameFileId = dp.GetDataProvider<ISpriteNameFileIdDataProvider>();
+                if (nameFileId != null)
+                {
+                    var pairs = rects
+                        .Select(r => new SpriteNameFileIdPair(r.name, r.spriteID))
+                        .ToList();
+                    nameFileId.SetNameFileIdPairs(pairs);
+                }
+
+                dp.Apply();
+                imp.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAllAssetRepresentationsAtPath(PlayerWalkPath)
+                .OfType<Sprite>()
+                .OrderBy(s => s.name)
+                .ToArray();
         }
 
         // ---- Gökyüzü arka planı ----
@@ -315,23 +406,29 @@ namespace Ulak.EditorTools
             }
         }
 
-        // ---- SerializedObject ile private [SerializeField] alanı ata ----
+        // ---- Reflection ile private [SerializeField] alanı doğrudan ata ----
+        // Not: SerializedObject.ApplyModifiedProperties MCP üzerinden tetiklenen
+        // sahne kurulumlarında güvenilmez şekilde kayboluyordu; doğrudan alan
+        // ataması canlı objeye yazar ve SaveScene her zaman bu değerleri kaydeder.
         private static void SerializedSet(Object target, string field, object value)
         {
-            var so = new SerializedObject(target);
-            var p = so.FindProperty(field);
-            if (p == null) { Debug.LogWarning($"[Ulak] Alan bulunamadı: {field} ({target})"); return; }
-
-            switch (value)
+            System.Reflection.FieldInfo fi = null;
+            for (var t = target.GetType(); t != null && fi == null; t = t.BaseType)
             {
-                case int i: p.intValue = i; break;
-                case float f: p.floatValue = f; break;
-                case Vector2 v2: p.vector2Value = v2; break;
-                case LayerMask lm: p.intValue = lm.value; break;
-                case Object o: p.objectReferenceValue = o; break;
-                default: Debug.LogWarning($"[Ulak] Desteklenmeyen tip: {field}"); break;
+                fi = t.GetField(field,
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.NonPublic);
             }
-            so.ApplyModifiedProperties();
+
+            if (fi == null)
+            {
+                Debug.LogWarning($"[Ulak] Alan bulunamadı: {field} ({target})");
+                return;
+            }
+
+            fi.SetValue(target, value);
+            EditorUtility.SetDirty(target);
         }
     }
 }

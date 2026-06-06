@@ -24,6 +24,11 @@ namespace Ulak.Gameplay
             foreach (var col in GetComponents<Collider2D>())
                 col.enabled = false;
 
+            // Can basma mekaniği: kesimi yapan oyuncuya 1 yük ver.
+            var player = GameObject.FindGameObjectWithTag("Player");
+            if (player != null)
+                player.GetComponent<KillCharges>()?.Add(1);
+
             Destroy(gameObject, destroyDelay);
         }
     }
