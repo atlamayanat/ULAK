@@ -371,6 +371,280 @@ namespace Ulak.EditorTools
             return made;
         }
 
+        // ---- Tilki yoldaşı gündüz sahnesine additive ekle ----
+        public static string IntegrateFox()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("Road_Day_Greybox"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(DayScenePath);
+            }
+
+            // 192x64 sheet = 6 sütun x 2 satır (32x32). Alt satır (rect y=0) = koşu.
+            Sprite[] all = GetOrCreateGridSprites(
+                "Assets/_Project/Art/Characters/Fox/tilki.png", 32, 32, 32f, "tilki");
+            if (all == null) return "tilki sheet yok";
+
+            var run = all.Where(s => s.name.StartsWith("tilki_r0_")).OrderBy(s => s.name).ToArray();
+            if (run.Length < 2) return "kosu karesi eksik: " + run.Length;
+
+            // Eski tilkiyi kaldır (yeniden çalıştırılabilir).
+            var old = GameObject.Find("FoxCompanion");
+            if (old != null) Object.DestroyImmediate(old);
+
+            var fox = new GameObject("FoxCompanion");
+            var sr = fox.AddComponent<SpriteRenderer>();
+            sr.sprite = run[0];
+            sr.sortingOrder = 9; // atın hemen arkasında
+
+            var book = fox.AddComponent<SpriteFlipbook>();
+            SerializedSet(book, "frames", run);
+            SerializedSet(book, "frameInterval", 0.1f); // tilki çevik
+
+            fox.AddComponent<FoxCompanion>();
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "tilki eklendi, kosu karesi=" + run.Length;
+        }
+
+        // ---- Gece sahnesi zemin/engellerini karo dokulara çevir (additive) ----
+        // Mevcut objelerin DÜNYA BOYUTLARINI aynen korur; sadece görseli
+        // Tiled moda çevirir (doku gerilmez, karo karo tekrarlar) ve
+        // TiledBoxSync ekler (sonraki elle uzatmalarda yamulma sigortası).
+        public static string ApplyNightTiles()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("Road_Greybox"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(NightScenePath);
+            }
+
+            Sprite grass = GetOrCreateTileSprite("Assets/_Project/Art/Environment/Tiles/grass_ground.jpeg");
+            Sprite dirt = GetOrCreateTileSprite("Assets/_Project/Art/Environment/Tiles/ground.jpeg");
+            if (grass == null || dirt == null) return "karo sprite eksik";
+
+            int nGround = 0, nObstacle = 0;
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                bool isGround = root.name.StartsWith("Ground");
+                bool isObstacle = root.name.StartsWith("Obstacle") || root.name.StartsWith("Wall");
+                if (!isGround && !isObstacle) continue;
+
+                var sr = root.GetComponent<SpriteRenderer>();
+                if (sr == null) continue;
+
+                // Mevcut dünya boyutunu koru (kullanıcının uzattığı ölçüler).
+                Vector2 worldSize = sr.bounds.size;
+
+                sr.sprite = isGround ? grass : dirt;
+                sr.color = Color.white;
+                sr.drawMode = SpriteDrawMode.Tiled;
+                sr.size = worldSize;
+                root.transform.localScale = Vector3.one;
+
+                var col = root.GetComponent<BoxCollider2D>();
+                if (col != null)
+                {
+                    col.size = worldSize;
+                    col.offset = Vector2.zero;
+                }
+
+                if (root.GetComponent<TiledBoxSync>() == null)
+                    root.AddComponent<TiledBoxSync>();
+
+                if (isGround) nGround++; else nObstacle++;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "zemin=" + nGround + " engel=" + nObstacle + " karoya cevrildi";
+        }
+
+        // ---- İki karo küpünü ŞABLON olarak sahneye ekle (elle tasarım için) ----
+        // Var olan hiçbir objeye dokunmaz; spawn yakınına 1x1 iki küp koyar.
+        // Kullanıcı Ctrl+D ile çoğaltıp uzatarak bölümü kendisi kurar;
+        // TiledBoxSync sayesinde uzatınca doku karo karo çoğalır, hitbox uyar.
+        public static string PlaceTileTemplates()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("Road_Greybox"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(NightScenePath);
+            }
+
+            Sprite grass = GetOrCreateTileSprite("Assets/_Project/Art/Environment/Tiles/grass_ground.jpeg");
+            Sprite dirt = GetOrCreateTileSprite("Assets/_Project/Art/Environment/Tiles/ground.jpeg");
+            if (grass == null || dirt == null) return "karo sprite eksik";
+
+            MakeTileCube("Tile_GrassGround", grass, new Vector2(-6f, -1f));
+            MakeTileCube("Tile_Ground", dirt, new Vector2(-8f, -1f));
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "2 karo kup eklendi (Tile_GrassGround, Tile_Ground)";
+        }
+
+        private static void MakeTileCube(string name, Sprite tile, Vector2 pos)
+        {
+            // Aynı isimde şablon zaten varsa dokunma (yeniden çalıştırılabilir).
+            if (GameObject.Find(name) != null) return;
+
+            var go = new GameObject(name);
+            go.layer = GroundLayer;
+            go.transform.position = pos;
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = tile;
+            sr.drawMode = SpriteDrawMode.Tiled;
+            sr.size = Vector2.one; // 1x1 küp
+
+            var col = go.AddComponent<BoxCollider2D>();
+            col.size = Vector2.one;
+
+            go.AddComponent<TiledBoxSync>();
+        }
+
+        // ---- Karo sprite: 65 ppu (1 birim/karo) + FullRect mesh (Tiled için) ----
+        private static Sprite GetOrCreateTileSprite(string path)
+        {
+            var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (imp == null)
+            {
+                Debug.LogWarning("[Ulak] Karo bulunamadı: " + path);
+                return null;
+            }
+
+            var settings = new TextureImporterSettings();
+            imp.ReadTextureSettings(settings);
+            bool needsSetup = imp.textureType != TextureImporterType.Sprite
+                              || imp.spriteImportMode != SpriteImportMode.Single
+                              || !Mathf.Approximately(imp.spritePixelsPerUnit, 65f)
+                              || settings.spriteMeshType != SpriteMeshType.FullRect;
+            if (needsSetup)
+            {
+                imp.textureType = TextureImporterType.Sprite;
+                imp.spriteImportMode = SpriteImportMode.Single;
+                imp.spritePixelsPerUnit = 65f; // 65 px = 1 dünya birimi (1 karo)
+                imp.filterMode = FilterMode.Point;
+                imp.textureCompression = TextureImporterCompression.Uncompressed;
+                imp.mipmapEnabled = false;
+
+                imp.ReadTextureSettings(settings);
+                settings.spriteMeshType = SpriteMeshType.FullRect; // Tiled mod şartı
+                imp.SetTextureSettings(settings);
+
+                imp.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
+        // ---- Yoldaşın görselini dost kurtla değiştir (additive) ----
+        public static string IntegrateWolf()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("Road_Day_Greybox"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(DayScenePath);
+            }
+
+            Sprite[] all = GetOrCreateGridSprites(
+                "Assets/_Project/Art/Characters/Wolf/kurt_dost.png", 32, 32, 32f, "kurt");
+            if (all == null) return "kurt sheet yok";
+
+            var run = all.Where(s => s.name.StartsWith("kurt_r0_")).OrderBy(s => s.name).ToArray();
+            if (run.Length < 2) return "kosu karesi eksik: " + run.Length;
+
+            // Mevcut yoldaşı bul (tilki ya da kurt adıyla).
+            var companion = GameObject.Find("FoxCompanion");
+            if (companion == null) companion = GameObject.Find("WolfCompanion");
+            if (companion == null) return "yoldas objesi yok";
+
+            companion.name = "WolfCompanion";
+            var sr = companion.GetComponent<SpriteRenderer>();
+            sr.sprite = run[0];
+
+            var book = companion.GetComponent<SpriteFlipbook>();
+            SerializedSet(book, "frames", run);
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "kurt entegre, kosu karesi=" + run.Length;
+        }
+
+        // ---- Genel ızgara dilimleyici: sütun x satır eşit kareler ----
+        // İsimlendirme: prefix_r{satır}_c{sütun} — r0 = dokunun EN ALT satırı.
+        public static Sprite[] GetOrCreateGridSprites(
+            string path, int frameW, int frameH, float ppu, string namePrefix)
+        {
+            var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (imp == null)
+            {
+                Debug.LogWarning("[Ulak] Sheet bulunamadı: " + path);
+                return null;
+            }
+
+            bool needsSetup = imp.textureType != TextureImporterType.Sprite
+                              || imp.spriteImportMode != SpriteImportMode.Multiple
+                              || !Mathf.Approximately(imp.spritePixelsPerUnit, ppu);
+            if (needsSetup)
+            {
+                imp.textureType = TextureImporterType.Sprite;
+                imp.spriteImportMode = SpriteImportMode.Multiple;
+                imp.spritePixelsPerUnit = ppu;
+                imp.filterMode = FilterMode.Point;
+                imp.textureCompression = TextureImporterCompression.Uncompressed;
+                imp.mipmapEnabled = false;
+
+                int texW, texH;
+                imp.GetSourceTextureWidthAndHeight(out texW, out texH);
+                int cols = Mathf.Max(1, texW / frameW);
+                int rows = Mathf.Max(1, texH / frameH);
+
+                var factory = new SpriteDataProviderFactories();
+                factory.Init();
+                var dp = factory.GetSpriteEditorDataProviderFromObject(imp);
+                dp.InitSpriteEditorDataProvider();
+
+                var rects = new List<SpriteRect>();
+                for (int r = 0; r < rows; r++)
+                    for (int c = 0; c < cols; c++)
+                    {
+                        rects.Add(new SpriteRect
+                        {
+                            name = $"{namePrefix}_r{r}_c{c}",
+                            rect = new Rect(c * frameW, r * frameH, frameW, frameH),
+                            alignment = SpriteAlignment.Center,
+                            pivot = new Vector2(0.5f, 0.5f),
+                            spriteID = GUID.Generate()
+                        });
+                    }
+                dp.SetSpriteRects(rects.ToArray());
+
+                var nameFileId = dp.GetDataProvider<ISpriteNameFileIdDataProvider>();
+                if (nameFileId != null)
+                    nameFileId.SetNameFileIdPairs(
+                        rects.Select(x => new SpriteNameFileIdPair(x.name, x.spriteID)).ToList());
+
+                dp.Apply();
+                imp.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAllAssetRepresentationsAtPath(path)
+                .OfType<Sprite>()
+                .OrderBy(s => s.name)
+                .ToArray();
+        }
+
         // ---- At görsellerini AÇIK gündüz sahnesine additive uygula ----
         // (Sahneyi yeniden kurmaz; mevcut Horse objesini günceller.)
         public static string IntegrateHorseArt()
