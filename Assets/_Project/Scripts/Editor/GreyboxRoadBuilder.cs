@@ -684,8 +684,38 @@ namespace Ulak.EditorTools
             go.AddComponent<TiledBoxSync>();
         }
 
-        // ---- Karo sprite: 65 ppu (1 birim/karo) + FullRect mesh (Tiled için) ----
-        private static Sprite GetOrCreateTileSprite(string path)
+        // ---- Dağ arka planını Umay Köy sahnesine additive ekle ----
+        public static string PlaceMountains()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("UmayKoy"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(UmayKoyScenePath);
+            }
+
+            if (GameObject.Find("Mountains") != null) return "Mountains zaten var";
+
+            // 1280x256 @64ppu → her tekrar 20 x 4 birim; Tiled ile köy boyunca yay.
+            Sprite daglar = GetOrCreateTileSprite("Assets/_Project/Art/Background/daglar.png", 64f);
+            if (daglar == null) return "daglar sprite yok";
+
+            var go = new GameObject("Mountains");
+            go.transform.position = new Vector3(30f, -0.5f, 0f); // tabanı zemin üstüne (−2.5) oturur
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = daglar;
+            sr.drawMode = SpriteDrawMode.Tiled;
+            sr.size = new Vector2(140f, 4f);
+            sr.sortingOrder = -85; // gökyüzünün önü, her şeyin arkası
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "daglar eklendi";
+        }
+
+        // ---- Karo sprite: ppu ayarlı + FullRect mesh (Tiled için) ----
+        private static Sprite GetOrCreateTileSprite(string path, float ppu = 65f)
         {
             var imp = AssetImporter.GetAtPath(path) as TextureImporter;
             if (imp == null)
@@ -698,13 +728,13 @@ namespace Ulak.EditorTools
             imp.ReadTextureSettings(settings);
             bool needsSetup = imp.textureType != TextureImporterType.Sprite
                               || imp.spriteImportMode != SpriteImportMode.Single
-                              || !Mathf.Approximately(imp.spritePixelsPerUnit, 65f)
+                              || !Mathf.Approximately(imp.spritePixelsPerUnit, ppu)
                               || settings.spriteMeshType != SpriteMeshType.FullRect;
             if (needsSetup)
             {
                 imp.textureType = TextureImporterType.Sprite;
                 imp.spriteImportMode = SpriteImportMode.Single;
-                imp.spritePixelsPerUnit = 65f; // 65 px = 1 dünya birimi (1 karo)
+                imp.spritePixelsPerUnit = ppu;
                 imp.filterMode = FilterMode.Point;
                 imp.textureCompression = TextureImporterCompression.Uncompressed;
                 imp.mipmapEnabled = false;
