@@ -15,6 +15,8 @@ namespace Ulak.EditorTools
     {
         private const string SpritePath = "Assets/_Project/Art/Greybox/square.png";
         private const string SkySpritePath = "Assets/_Project/Art/Background/gokyuzu.png";
+        private const string PlayerIdle0Path = "Assets/_Project/Art/Characters/Player/player_idle_0.png";
+        private const string PlayerIdle1Path = "Assets/_Project/Art/Characters/Player/player_idle_1.png";
         private const string PhysMatPath = "Assets/_Project/Art/Greybox/NoFriction.physicsMaterial2D";
         private const int GroundLayer = 6;
         private const int EnemyLayer = 7;
@@ -82,14 +84,30 @@ namespace Ulak.EditorTools
         // ---- Oyuncu kurulumu ----
         private static GameObject BuildPlayer(Sprite sq, PhysicsMaterial2D noFriction)
         {
+            // Karakter görselleri: 32x48 px, 32 ppu → 1 x 1.5 dünya birimi.
+            Sprite idle0 = GetOrCreateCharacterSprite(PlayerIdle0Path);
+            Sprite idle1 = GetOrCreateCharacterSprite(PlayerIdle1Path);
+            bool hasArt = idle0 != null;
+
             var go = new GameObject("Player");
             go.tag = "Player";
-            go.transform.position = new Vector2(-3f, -1.8f);
+            go.transform.position = new Vector2(-3f, -1.7f);
 
             var sr = go.AddComponent<SpriteRenderer>();
-            sr.sprite = sq;
-            sr.color = new Color(0.3f, 0.6f, 1f);
+            sr.sprite = hasArt ? idle0 : sq;
+            sr.color = hasArt ? Color.white : new Color(0.3f, 0.6f, 1f);
             sr.sortingOrder = 10;
+
+            if (hasArt && idle1 != null)
+            {
+                var book = go.AddComponent<SpriteFlipbook>();
+                var so = new SerializedObject(book);
+                var fr = so.FindProperty("frames");
+                fr.arraySize = 2;
+                fr.GetArrayElementAtIndex(0).objectReferenceValue = idle0;
+                fr.GetArrayElementAtIndex(1).objectReferenceValue = idle1;
+                so.ApplyModifiedProperties();
+            }
 
             var rb = go.AddComponent<Rigidbody2D>();
             rb.gravityScale = 3.5f;
@@ -98,20 +116,25 @@ namespace Ulak.EditorTools
             rb.interpolation = RigidbodyInterpolation2D.Interpolate;
 
             // Sıfır sürtünme: duvara dayanırken yapışıp kalmayı önler (zıplayarak aşılabilir).
+            // Hitbox görselin dolu alanına göre: 15 px genişlik, 48 px boy (32 ppu).
             var col = go.AddComponent<BoxCollider2D>();
             col.sharedMaterial = noFriction;
+            if (hasArt)
+                col.size = new Vector2(0.47f, 1.5f);
 
             go.AddComponent<Knockback>();
             go.AddComponent<DamageFlash>();
 
             var health = go.AddComponent<Health>();
             SerializedSet(health, "maxHealth", 5);
-            go.AddComponent<HealthBar>();
+            var bar = go.AddComponent<HealthBar>();
+            if (hasArt) // bar, 1.5 birimlik karakterin tepesinin üstünde dursun
+                SerializedSet(bar, "offset", new Vector2(0f, 1.05f));
 
-            // Ayak hizası zemin kontrol noktası
+            // Ayak hizası zemin kontrol noktası (sprite altı: -0.75)
             var feet = new GameObject("GroundCheck");
             feet.transform.SetParent(go.transform);
-            feet.transform.localPosition = new Vector3(0, -0.55f, 0);
+            feet.transform.localPosition = new Vector3(0, hasArt ? -0.78f : -0.55f, 0);
 
             var pc = go.AddComponent<PlayerController>();
             SerializedSet(pc, "groundCheck", feet.transform);
@@ -197,6 +220,32 @@ namespace Ulak.EditorTools
             return AssetDatabase.LoadAssetAtPath<Sprite>(SpritePath);
         }
 
+        // ---- Karakter sprite'ı: pixel-art importer ayarlarıyla yükle ----
+        private static Sprite GetOrCreateCharacterSprite(string path)
+        {
+            var imp = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (imp == null)
+            {
+                Debug.LogWarning("[Ulak] Karakter görseli bulunamadı: " + path);
+                return null;
+            }
+
+            // Pixel-art için doğru ayarlar (idempotent — değişmişse güncelle).
+            if (imp.textureType != TextureImporterType.Sprite ||
+                !Mathf.Approximately(imp.spritePixelsPerUnit, 32f) ||
+                imp.filterMode != FilterMode.Point)
+            {
+                imp.textureType = TextureImporterType.Sprite;
+                imp.spritePixelsPerUnit = 32f; // 32x48 px → 1 x 1.5 dünya birimi
+                imp.filterMode = FilterMode.Point;
+                imp.textureCompression = TextureImporterCompression.Uncompressed;
+                imp.mipmapEnabled = false;
+                imp.SaveAndReimport();
+            }
+
+            return AssetDatabase.LoadAssetAtPath<Sprite>(path);
+        }
+
         // ---- Gökyüzü arka planı ----
         private static void BuildSky(Camera cam)
         {
@@ -277,6 +326,7 @@ namespace Ulak.EditorTools
             {
                 case int i: p.intValue = i; break;
                 case float f: p.floatValue = f; break;
+                case Vector2 v2: p.vector2Value = v2; break;
                 case LayerMask lm: p.intValue = lm.value; break;
                 case Object o: p.objectReferenceValue = o; break;
                 default: Debug.LogWarning($"[Ulak] Desteklenmeyen tip: {field}"); break;

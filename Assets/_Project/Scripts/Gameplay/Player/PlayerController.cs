@@ -32,6 +32,7 @@ namespace Ulak.Gameplay
 
         private Rigidbody2D _rb;
         private Knockback _knockback;
+        private SpriteFlipbook _flipbook;
         private bool _isGrounded;
         private float _lastGroundedTime;
         private bool _jumpQueued;
@@ -46,6 +47,7 @@ namespace Ulak.Gameplay
         {
             _rb = GetComponent<Rigidbody2D>();
             _knockback = GetComponent<Knockback>();
+            _flipbook = GetComponent<SpriteFlipbook>();
         }
 
         private void Update()
@@ -54,6 +56,7 @@ namespace Ulak.Gameplay
             _moveInput = ReadMoveInput();
             if (_moveInput > 0.01f) FacingX = 1;
             else if (_moveInput < -0.01f) FacingX = -1;
+            _flipbook?.SetFacing(FacingX);
 
             if (JumpPressedThisFrame())
                 _jumpQueued = true;
