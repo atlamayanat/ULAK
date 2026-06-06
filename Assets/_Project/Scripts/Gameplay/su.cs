@@ -4,60 +4,59 @@ public class SuYonetici : MonoBehaviour
 {
     public Transform[] sular;
 
-    [Header("Parallax ve Akýþ")]
+    [Header("Hareket Ayarlarý")]
     [Range(0f, 1f)]
     public float parallaxCarpani = 0.9f;
-    [Tooltip("Karakter dursa bile suyun kendi kendine akma hýzý")]
-    public float sabitAkimHizi = -0.5f; // Eksi deðer sola, artý deðer saða akýtýr
-
-    [Header("Boþluk Kapatma")]
-    public float ortusmePayi = 0.1f;
 
     private float genislik;
     private Transform kamera;
-    private float sonKameraX;
+    private Vector3 sonKameraPozisyonu;
 
     void Start()
     {
         kamera = Camera.main.transform;
-        genislik = sular[0].GetComponent<SpriteRenderer>().bounds.size.x;
-        sonKameraX = kamera.position.x;
+        // 0.05f yýrtýlmalarý engeller
+        genislik = sular[0].GetComponent<SpriteRenderer>().bounds.size.x - 0.05f;
+        sonKameraPozisyonu = kamera.position;
     }
 
-    void Update()
+    void LateUpdate()
     {
-        float kameraFarki = kamera.position.x - sonKameraX;
+        float kameraHareketX = kamera.position.x - sonKameraPozisyonu.x;
 
         for (int i = 0; i < sular.Length; i++)
         {
-            // Hem kameraya göre parallax yap, hem de sabit hýzda akmaya devam et
-            float hareket = (kameraFarki * parallaxCarpani) + (sabitAkimHizi * Time.deltaTime);
-            sular[i].Translate(Vector3.right * hareket);
+            // Parallax hareketi
+            sular[i].position += new Vector3(kameraHareketX * parallaxCarpani, 0, 0);
 
-            // Sola doðru ekrandan çýktýysa saða ýþýnla
-            if (sular[i].position.x < kamera.position.x - genislik)
+            // Su parçasý kameranýn ÇOK SOLUNDA kaldýysa (Ekrandan iyice çýktýysa)
+            if (kamera.position.x - sular[i].position.x > (genislik * 1.5f))
             {
-                float enSagdakiX = sular[i].position.x;
-                for (int j = 0; j < sular.Length; j++)
+                // En saðdaki parçayý bul
+                float enSagdakiX = sular[0].position.x;
+                for (int j = 1; j < sular.Length; j++)
+                {
                     if (sular[j].position.x > enSagdakiX) enSagdakiX = sular[j].position.x;
+                }
 
-                Vector3 yeniPoz = sular[i].position;
-                yeniPoz.x = enSagdakiX + genislik - ortusmePayi;
-                sular[i].position = yeniPoz;
+                // Onu en saðdaki parçanýn bitiþiðine milimetrik yapýþtýr
+                sular[i].position = new Vector3(enSagdakiX + genislik, sular[i].position.y, sular[i].position.z);
             }
-            // Saða doðru ekrandan çýktýysa sola ýþýnla (Karakter geri koþarken veya su saða akarken)
-            else if (sular[i].position.x > kamera.position.x + genislik)
+            // Su parçasý kameranýn ÇOK SAÐINDA kaldýysa (Karakter sola koþuyorsa)
+            else if (sular[i].position.x - kamera.position.x > (genislik * 1.5f))
             {
-                float enSoldakiX = sular[i].position.x;
-                for (int j = 0; j < sular.Length; j++)
+                // En soldaki parçayý bul
+                float enSoldakiX = sular[0].position.x;
+                for (int j = 1; j < sular.Length; j++)
+                {
                     if (sular[j].position.x < enSoldakiX) enSoldakiX = sular[j].position.x;
+                }
 
-                Vector3 yeniPoz = sular[i].position;
-                yeniPoz.x = enSoldakiX - genislik + ortusmePayi;
-                sular[i].position = yeniPoz;
+                // Onu en soldaki parçanýn bitiþiðine milimetrik yapýþtýr
+                sular[i].position = new Vector3(enSoldakiX - genislik, sular[i].position.y, sular[i].position.z);
             }
         }
 
-        sonKameraX = kamera.position.x;
+        sonKameraPozisyonu = kamera.position;
     }
 }

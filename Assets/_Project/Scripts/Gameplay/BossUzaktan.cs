@@ -1,5 +1,5 @@
 using UnityEngine;
-using Ulak.Core; // Senin hasar sistemini tanýmasý için
+using Ulak.Core;
 
 public class BossProjectile : MonoBehaviour
 {
@@ -7,13 +7,15 @@ public class BossProjectile : MonoBehaviour
     public int damage = 10;
     public float knockbackForce = 15f;
 
-    // Mermi bir þeye çarptýðýnda otomatik tetiklenir
+    [Header("Çarpýþma Ayarlarý")]
+    [Tooltip("Merminin çarpýp yok olacaðý katmanlar (Örn: Zemin, Duvar)")]
+    public LayerMask engelKatmanlari;
+
     void OnTriggerEnter2D(Collider2D hit)
     {
         // 1. Çarptýðý þey Player ise
         if (hit.CompareTag("Player"))
         {
-            // Oyuncudaki hasar sistemini bul
             var dmg = hit.GetComponent<IDamageable>();
             if (dmg != null)
             {
@@ -22,15 +24,15 @@ public class BossProjectile : MonoBehaviour
                 Vector2 kb = new Vector2(dirX, 0.5f).normalized * knockbackForce;
 
                 dmg.TakeDamage(damage, kb);
-                Debug.Log("Mermi oyuncuya çarptý ve hasar verdi!");
             }
 
-            // Çarptýktan sonra mermiyi yok et
+            // Oyuncuya çarptýktan sonra mermiyi yok et
             Destroy(gameObject);
         }
-        // 2. Çarptýðý þey Zemin ise (Duvarlardan geçip gitmesin)
-        else if (hit.gameObject.layer == LayerMask.NameToLayer("Zemin"))
+        // 2. Çarptýðý þey seçtiðimiz Engel Katmanlarýndan (Zemin, Duvar vs.) biri ise
+        else if ((engelKatmanlari.value & (1 << hit.gameObject.layer)) > 0)
         {
+            // Duvara veya zemine çarptýðý an mermiyi yok et
             Destroy(gameObject);
         }
     }

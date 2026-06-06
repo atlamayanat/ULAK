@@ -108,6 +108,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::BossProjectile
   damage: 3
   knockbackForce: 15
+  engelKatmanlari:
+    serializedVersion: 2
+    m_Bits: 64
 --- !u!50 &-9211099110912155240
 Rigidbody2D:
   serializedVersion: 5

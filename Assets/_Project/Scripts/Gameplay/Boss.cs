@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections;
-using Ulak.Core; // Senin hasar sistemin
+using Ulak.Core;
 
 public class BossController : MonoBehaviour, IDamageable
 {
@@ -30,8 +30,8 @@ public class BossController : MonoBehaviour, IDamageable
     public float meleeRange = 2.5f;
     public float attackCooldown = 2f;
     private float nextAttackTime = 0f;
-    public int meleeDamage = 20;     // Kılıç vuruş hasarı
-    public int contactDamage = 10;   // Karaktere düz çarpma hasarı
+    public int meleeDamage = 20;
+    public int contactDamage = 10;
 
     public GameObject rangedProjectilePrefab;
     public GameObject meleeVisualPrefab;
@@ -39,7 +39,11 @@ public class BossController : MonoBehaviour, IDamageable
 
     private SpriteRenderer sr;
     private Color originalColor;
-    private Vector3 originalScale; // Objeyi doğru döndürmek için hafıza alanı
+    private Vector3 originalScale;
+
+    // --- YENİ YAPAY ZEKA DEĞİŞKENLERİ ---
+    private float ceilingEscapeDir = 0f; // Tavandan kaçış yönü kilidi
+    public float tavanKontrolMesafesi = 3.5f; // Yukarı doğru atılacak lazerin boyu
 
     public bool IsAlive => currentHealth > 0;
 
@@ -53,7 +57,6 @@ public class BossController : MonoBehaviour, IDamageable
         sr = GetComponent<SpriteRenderer>();
         if (sr != null) originalColor = sr.color;
 
-        // Objelerin boyut hafızasını alıyoruz (FlipX tuzağından kurtulmak için)
         originalScale = transform.localScale;
 
         if (healthBarParent != null)
@@ -73,41 +76,80 @@ public class BossController : MonoBehaviour, IDamageable
         float distX = player.position.x - transform.position.x;
         float distY = player.position.y - transform.position.y;
 
+        // Çevre Kontrolleri (Lazerler)
         bool isGrounded = Physics2D.Raycast(transform.position, Vector2.down, 1.5f, groundLayer);
+
+        Vector2 bakisYonu = new Vector2(Mathf.Sign(transform.localScale.x), 0);
+        bool duvaraCarpti = Physics2D.Raycast(transform.position, bakisYonu, 1.2f, groundLayer);
+
+        // YENİ LAZER: Tam kafasının üstünde engelleyici bir platform/tavan var mı?
+        bool kafaUstuTavanVar = Physics2D.Raycast(transform.position, Vector2.up, tavanKontrolMesafesi, groundLayer);
+
         float dirX = 0f;
 
-        // 1. DURUM: OYUNCU ALT KATTA (Boss üst katta tam üstündeyse kenara yürüyüp düşmeli)
-        if (distY < -1.5f && isGrounded)
+        // Havada donma kontrolü
+        if (!isGrounded)
         {
+            dirX = Mathf.Sign(rb.linearVelocity.x);
+            if (Mathf.Abs(rb.linearVelocity.x) < 0.1f) dirX = Mathf.Sign(distX);
+        }
+        // 1. DURUM: OYUNCU ÜST KATTA VE BOSS TAVANIN ALTINDA (Gelişmiş Çıkış Arama)
+        else if (distY > 1.5f && kafaUstuTavanVar)
+        {
+            // Eğer henüz bir kaçış yönü seçmediyse, en mantıklı yönü kilitle
+            if (ceilingEscapeDir == 0f)
+            {
+                // Oyuncu ne taraftaysa o taraftaki çıkışa doğru gitmeyi dene
+                if (Mathf.Abs(distX) > 0.5f)
+                    ceilingEscapeDir = Mathf.Sign(distX);
+                else
+                    ceilingEscapeDir = (rb.linearVelocity.x >= 0) ? 1f : -1f; // Tam altındaysa mevcut yönünü koru
+            }
+
+            // Çıkış yolunda haritanın dış duvarına çarparsa körü körüne duvara yürüme, yönü tersine çevir!
+            if (duvaraCarpti)
+            {
+                ceilingEscapeDir = -ceilingEscapeDir;
+            }
+
+            dirX = ceilingEscapeDir;
+        }
+        // 2. DURUM: OYUNCU ÜST KATTA AMA BOSS BOŞLUKTA (Tavan bitti, direkt zıpla!)
+        else if (distY > 1.5f && !kafaUstuTavanVar)
+        {
+            ceilingEscapeDir = 0f; // Kaçış kilidini sıfırla
+            dirX = Mathf.Sign(distX); // Oyuncuya yönel
+
+            if (isGrounded)
+            {
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce); // Yukarı fırla!
+            }
+        }
+        // 3. DURUM: OYUNCU ALT KATTA (Aşağı düşme zekası)
+        else if (distY < -1.5f)
+        {
+            ceilingEscapeDir = 0f;
             if (Mathf.Abs(distX) < 1.2f)
             {
-                // Tam üst üste hizalandılarsa donup kalma! Boşluğa ulaşana kadar son gittiğin yöne inatla devam et
-                if (Mathf.Abs(rb.linearVelocity.x) < 0.1f)
-                    dirX = 1f;
-                else
-                    dirX = Mathf.Sign(rb.linearVelocity.x);
+                dirX = (Mathf.Abs(rb.linearVelocity.x) < 0.1f) ? 1f : Mathf.Sign(rb.linearVelocity.x);
             }
             else
             {
-                // X eksenleri henüz aynı değilse oyuncunun olduğu taraftaki platform kenarına yürü
                 dirX = Mathf.Sign(distX);
             }
         }
-        // 2. DURUM: OYUNCU ÜST KATTA (Zıplama pozisyonu al)
-        else if (distY > 1.5f && isGrounded)
+        // 4. DURUM: AYNI KATTALAR (Standart Takip)
+        else
         {
-            dirX = Mathf.Sign(distX);
-            // Tam altındaysa ve zıplayamıyorsa platformun altından çıkmak için hafifçe yana hamle yap
-            if (Mathf.Abs(distX) < 0.2f) dirX = 1f;
-        }
-        // 3. DURUM: AYNI KATTALAR (Klasik Takip)
-        else if (Mathf.Abs(distX) > 0.2f)
-        {
-            dirX = Mathf.Sign(distX);
+            ceilingEscapeDir = 0f;
+            if (Mathf.Abs(distX) > 0.2f)
+            {
+                dirX = Mathf.Sign(distX);
+            }
         }
 
-        // ÜST KATA ZIPLAMA TETİKLEYİCİSİ
-        if (isGrounded && distY > 1.5f && Mathf.Abs(distX) < 3f)
+        // Genel Duvar Aşma (Aynı kattayken bir kutuya/engele çarparsa zıplaması için)
+        if (isGrounded && duvaraCarpti && !kafaUstuTavanVar)
         {
             rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
         }
@@ -115,7 +157,7 @@ public class BossController : MonoBehaviour, IDamageable
         // Hareketi Uygula
         rb.linearVelocity = new Vector2(dirX * currentMoveSpeed, rb.linearVelocity.y);
 
-        // KESİN DÖNÜŞ ÇÖZÜMÜ: Sadece görseli değil, firePoint dahil tüm gövdeyi yönüne göre aynalıyoruz
+        // Yön Aynalama
         if (dirX != 0)
         {
             float yeniYönX = Mathf.Sign(dirX) * originalScale.x;
@@ -127,8 +169,7 @@ public class BossController : MonoBehaviour, IDamageable
         {
             float distanceToPlayer = Vector2.Distance(transform.position, player.position);
 
-            // Sadece Y ekseninde yakınlarsa (aynı kat hizası) atak yapsın
-            if (Mathf.Abs(distY) < 2.2f)
+            if (Mathf.Abs(distY) < 2.2f && !duvaraCarpti)
             {
                 rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
 
@@ -143,19 +184,13 @@ public class BossController : MonoBehaviour, IDamageable
     void MeleeAttack()
     {
         nextAttackTime = Time.time + attackCooldown;
-
         if (meleeVisualPrefab != null && firePoint != null)
         {
             GameObject slash = Instantiate(meleeVisualPrefab, firePoint.position, Quaternion.identity);
-
-            // Boss sola bakıyorsa kılıç efektini de sola doğru ters çevir
-            if (transform.localScale.x < 0)
-                slash.transform.localScale = new Vector3(-1, 1, 1);
-
+            if (transform.localScale.x < 0) slash.transform.localScale = new Vector3(-1, 1, 1);
             Destroy(slash, 0.2f);
         }
 
-        // KILIÇ HASAR ALANI (Görünmez Küre Taraması)
         if (firePoint != null)
         {
             Collider2D[] hits = Physics2D.OverlapCircleAll(firePoint.position, meleeRange * 0.8f);
@@ -166,10 +201,8 @@ public class BossController : MonoBehaviour, IDamageable
                     var dmg = hit.GetComponent<IDamageable>();
                     if (dmg != null)
                     {
-                        // Oyuncuyu vurduğu yöne doğru geri fırlatma vektörü
                         float pushDirX = Mathf.Sign(hit.transform.position.x - transform.position.x);
                         Vector2 kb = new Vector2(pushDirX, 0.3f).normalized * 14f;
-
                         dmg.TakeDamage(meleeDamage, kb);
                     }
                 }
@@ -177,7 +210,6 @@ public class BossController : MonoBehaviour, IDamageable
         }
     }
 
-    // HOLLOW KNIGHT TARZI BEDENSEL TEMAS HASARI (Üstüne düşerse hasar yeriz)
     void OnCollisionStay2D(Collision2D collision)
     {
         if (collision.gameObject.CompareTag("Player") && !isResettingToCenter && IsAlive)
@@ -195,15 +227,11 @@ public class BossController : MonoBehaviour, IDamageable
     void RangedAttack()
     {
         nextAttackTime = Time.time + attackCooldown;
-
         if (rangedProjectilePrefab != null && firePoint != null)
         {
             GameObject ok = Instantiate(rangedProjectilePrefab, firePoint.position, Quaternion.identity);
             Vector2 yon = (player.position - firePoint.position).normalized;
-
-            // Merminin Rigidbody2D bileşenine erişip fırlatıyoruz
             ok.GetComponent<Rigidbody2D>().linearVelocity = yon * 9f;
-
             Destroy(ok, 3f);
         }
     }
@@ -249,7 +277,7 @@ public class BossController : MonoBehaviour, IDamageable
     {
         isResettingToCenter = true;
         rb.linearVelocity = Vector2.zero;
-        rb.bodyType = RigidbodyType2D.Kinematic; // Unity 6 Uyarısız Yeni Kod Yapısı
+        rb.bodyType = RigidbodyType2D.Kinematic;
 
         while (Vector2.Distance(transform.position, defaultPosition) > 0.1f)
         {
@@ -273,5 +301,9 @@ public class BossController : MonoBehaviour, IDamageable
             Gizmos.color = new Color(1, 0, 0, 0.4f);
             Gizmos.DrawWireSphere(firePoint.position, meleeRange * 0.8f);
         }
+
+        // Editor'de tavan kontrol çizgisini mavi görmek için
+        Gizmos.color = Color.blue;
+        Gizmos.DrawLine(transform.position, transform.position + Vector3.up * tavanKontrolMesafesi);
     }
 }
