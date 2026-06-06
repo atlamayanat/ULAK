@@ -106,7 +106,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a98e18abfad5f1a4db624fe6f3d2e790, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BossProjectile
-  damage: 10
+  damage: 3
   knockbackForce: 15
 --- !u!50 &-9211099110912155240
 Rigidbody2D:

@@ -498,6 +498,9 @@ MonoBehaviour:
   targetLayers:
     serializedVersion: 2
     m_Bits: 128
+  obstructionLayers:
+    serializedVersion: 2
+    m_Bits: 0
   knockbackForce: 18
   knockbackUp: 0.45
   slashVisual: {fileID: 1647814705}
@@ -522,6 +525,8 @@ MonoBehaviour:
   groundCheck: {fileID: 312847019}
   groundCheckRadius: 0.15
   coyoteTime: 0.1
+  stompDamage: 1
+  stompJumpMultiplier: 1.35
   dashSpeed: 25
   dashDuration: 0.14
   dashCooldown: 1
@@ -554,7 +559,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 84a68392bf64d15459d51ee97cd551f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ulak.Core.Health
-  maxHealth: 5
+  maxHealth: 12
   OnDamaged:
     m_PersistentCalls:
       m_Calls: []
