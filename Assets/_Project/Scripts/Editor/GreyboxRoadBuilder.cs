@@ -714,6 +714,160 @@ namespace Ulak.EditorTools
             return "daglar eklendi";
         }
 
+        // ---- Umay Köy arka planını (dağ + gökyüzü + kamera) tüm sahnelere uygula ----
+        public static string ApplyUmayBackdropToAll()
+        {
+            EditorSceneManager.SaveOpenScenes();
+
+            // ===== 1) KAYNAK: UmayKoy'dan ayarları oku =====
+            EditorSceneManager.OpenScene(UmayKoyScenePath);
+
+            // Dağ objeleri: "daglar*" ya da "Mountains*" adlı tüm kök objeler
+            // (sonsuz döngü için 2 kopyalı kurulum dahil) birebir kopyalanır.
+            var srcScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            var mountainSrcs = srcScene.GetRootGameObjects()
+                .Where(g => g.name.StartsWith("daglar") || g.name.StartsWith("Mountains"))
+                .Where(g => g.GetComponent<SpriteRenderer>() != null)
+                .ToArray();
+            if (mountainSrcs.Length == 0) return "UmayKoy'da dag objesi yok";
+
+            // Sahne değişince objeler yok olur — verileri düz değerlere kopyala.
+            var mData = mountainSrcs.Select(g =>
+            {
+                var gsr = g.GetComponent<SpriteRenderer>();
+                var gpb = g.GetComponent<ParallaxBackground>();
+                return new
+                {
+                    name = g.name,
+                    pos = g.transform.position,
+                    scale = g.transform.localScale,
+                    sprite = gsr.sprite,
+                    mode = gsr.drawMode,
+                    size = gsr.drawMode != SpriteDrawMode.Simple ? gsr.size : Vector2.zero,
+                    color = gsr.color,
+                    order = gsr.sortingOrder,
+                    pbFactor = gpb != null ? gpb.parallaxEffect : float.NaN
+                };
+            }).ToArray();
+
+            var camSrcGo = GameObject.FindGameObjectWithTag("MainCamera");
+            var camSrc = camSrcGo.GetComponent<Camera>();
+            float orthoSize = camSrc.orthographicSize;
+            Color camBg = camSrc.backgroundColor;
+            Vector3 camPos = camSrcGo.transform.position;
+            var cfSrc = camSrcGo.GetComponent<CameraFollow>();
+            object cfOffset = cfSrc != null ? GetFieldValue(cfSrc, "offset") : null;
+            object cfSmooth = cfSrc != null ? GetFieldValue(cfSrc, "smoothTime") : null;
+            object cfFollowY = cfSrc != null ? GetFieldValue(cfSrc, "followY") : null;
+
+            var skySrc = GameObject.Find("Sky");
+            Sprite skySprite = null;
+            object skyDur = null;
+            if (skySrc != null)
+            {
+                skySprite = skySrc.GetComponent<SpriteRenderer>().sprite;
+                var sbSrc = skySrc.GetComponent<SkyBackground>();
+                if (sbSrc != null) skyDur = GetFieldValue(sbSrc, "sunriseDuration");
+            }
+
+            // ===== 2) HEDEF SAHNELERE UYGULA =====
+            string[] targets =
+            {
+                NightScenePath,
+                DayScenePath,
+                "Assets/Scenes/BossFightArea.unity",
+                "Assets/Scenes/umay_koy.unity"
+            };
+
+            var log = new System.Text.StringBuilder();
+            foreach (string path in targets)
+            {
+                if (!System.IO.File.Exists(path)) continue;
+                var scene = EditorSceneManager.OpenScene(path);
+
+                var camGo = GameObject.FindGameObjectWithTag("MainCamera");
+                Camera cam = camGo != null ? camGo.GetComponent<Camera>() : null;
+
+                // --- Kamera: Umay ayarları ---
+                if (cam != null)
+                {
+                    cam.orthographic = true;
+                    cam.orthographicSize = orthoSize;
+                    cam.backgroundColor = camBg;
+                    cam.clearFlags = CameraClearFlags.SolidColor;
+                    camGo.transform.position = camPos;
+
+                    var cf = camGo.GetComponent<CameraFollow>();
+                    if (cf == null) cf = camGo.AddComponent<CameraFollow>();
+                    if (cfOffset != null) SerializedSet(cf, "offset", cfOffset);
+                    if (cfSmooth != null) SerializedSet(cf, "smoothTime", cfSmooth);
+                    if (cfFollowY != null) SerializedSet(cf, "followY", cfFollowY);
+                }
+
+                // --- Dağlar: eski dağ objelerini temizle, kaynaktakileri birebir kur ---
+                foreach (var oldM in scene.GetRootGameObjects()
+                             .Where(g => g.name.StartsWith("daglar") || g.name.StartsWith("Mountains"))
+                             .ToArray())
+                    Object.DestroyImmediate(oldM);
+
+                foreach (var d in mData)
+                {
+                    var m = new GameObject(d.name);
+                    var sr = m.AddComponent<SpriteRenderer>();
+                    sr.sprite = d.sprite;
+                    sr.drawMode = d.mode;
+                    if (d.mode != SpriteDrawMode.Simple) sr.size = d.size;
+                    sr.color = d.color;
+                    sr.sortingOrder = d.order;
+                    m.transform.position = d.pos;
+                    m.transform.localScale = d.scale;
+                    if (!float.IsNaN(d.pbFactor))
+                    {
+                        var pb = m.AddComponent<ParallaxBackground>();
+                        pb.parallaxEffect = d.pbFactor;
+                        if (camGo != null) pb.cam = camGo;
+                    }
+                }
+
+                // --- Gökyüzü: yoksa Umay'ınkiyle kur; varsa görseline dokunma ---
+                var sky = GameObject.Find("Sky");
+                if (sky == null && skySprite != null)
+                {
+                    sky = new GameObject("Sky");
+                    var ssr = sky.AddComponent<SpriteRenderer>();
+                    ssr.sprite = skySprite;
+                    ssr.sortingOrder = -100;
+                    var sb = sky.AddComponent<SkyBackground>();
+                    if (cam != null) SerializedSet(sb, "targetCamera", cam);
+                    if (skyDur != null) SerializedSet(sb, "sunriseDuration", skyDur);
+                }
+                // Not: VAR OLAN Sky'ın sunriseDuration'ına bilerek dokunulmuyor —
+                // gece sahnesinin gün doğumu akışı tasarım gereği korunur.
+
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene);
+                log.Append(scene.name).Append(" ");
+            }
+
+            // Kaynak sahneye geri dön.
+            EditorSceneManager.OpenScene(UmayKoyScenePath);
+            return "uygulandi: " + log;
+        }
+
+        // ---- Reflection ile private alan oku (SerializedSet'in tersi) ----
+        private static object GetFieldValue(Object target, string field)
+        {
+            for (var t = target.GetType(); t != null; t = t.BaseType)
+            {
+                var fi = t.GetField(field,
+                    System.Reflection.BindingFlags.Instance |
+                    System.Reflection.BindingFlags.Public |
+                    System.Reflection.BindingFlags.NonPublic);
+                if (fi != null) return fi.GetValue(target);
+            }
+            return null;
+        }
+
         // ---- Karo sprite: ppu ayarlı + FullRect mesh (Tiled için) ----
         private static Sprite GetOrCreateTileSprite(string path, float ppu = 65f)
         {
