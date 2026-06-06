@@ -657,6 +657,89 @@ namespace Ulak.EditorTools
             return "eklenen: " + (sb.Length > 0 ? sb.ToString() : "(hepsi zaten vardı)");
         }
 
+        // ---- Eski kırmızı Enemy_Small küplerini 3 yeni türe dönüştür ----
+        // Her düşman kendi konumunda kalır; sırayla Karakura → Tepegöz → Merküt
+        // dağıtılır (Merküt havaya alınır). Haritadaki başka hiçbir şeye dokunmaz.
+        public static string ReplaceOldEnemies()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("Road_Greybox"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(NightScenePath);
+            }
+
+            EnsureLayers();
+            Sprite sq = GetOrCreateSquareSprite();
+            PhysicsMaterial2D noFriction = GetOrCreateNoFrictionMaterial();
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            var olds = scene.GetRootGameObjects()
+                .Where(g => g.name.StartsWith("Enemy_Small"))
+                .ToArray();
+            if (olds.Length == 0) return "Enemy_Small bulunamadı";
+
+            int k = 0, tp = 0, mk = 0, i = 0;
+            foreach (var old in olds)
+            {
+                Vector2 pos = old.transform.position;
+                Object.DestroyImmediate(old);
+
+                switch (i % 3)
+                {
+                    case 0: SpawnKarakura(pos, sq, noFriction); k++; break;
+                    case 1: SpawnTepegoz(pos + Vector2.up * 0.35f, sq, noFriction); tp++; break;
+                    default: SpawnMerkut(new Vector2(pos.x, pos.y + 3f), sq, noFriction); mk++; break;
+                }
+                i++;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return $"donusturulen {olds.Length}: Karakura={k} Tepegoz={tp} Merkut={mk}";
+        }
+
+        // ---- Tür üreticileri ----
+        private static GameObject SpawnKarakura(Vector2 pos, Sprite sq, PhysicsMaterial2D nf)
+        {
+            var go = MakeMonsterBase("Karakura", sq, nf, pos,
+                new Color(0.6f, 0.2f, 0.75f), new Vector3(0.9f, 0.9f, 1f), 2, 3.5f);
+            var ai = go.AddComponent<SmallEnemyAI>();
+            SerializedSet(ai, "moveSpeed", 3.6f);
+            SerializedSet(ai, "patrolSpeed", 1.6f);
+            SerializedSet(ai, "aggroRange", 9f);
+            SerializedSet(ai, "loseAggroRange", 14f);
+            SerializedSet(ai, "contactCooldown", 0.5f);
+            go.AddComponent<EnemyDeath>();
+            return go;
+        }
+
+        private static GameObject SpawnTepegoz(Vector2 pos, Sprite sq, PhysicsMaterial2D nf)
+        {
+            var go = MakeMonsterBase("Tepegoz", sq, nf, pos,
+                new Color(0.3f, 0.5f, 0.25f), new Vector3(1.6f, 1.6f, 1f), 8, 3.5f);
+            go.GetComponent<Rigidbody2D>().mass = 3f;
+            var ai = go.AddComponent<SmallEnemyAI>();
+            SerializedSet(ai, "moveSpeed", 1.2f);
+            SerializedSet(ai, "patrolSpeed", 0.6f);
+            SerializedSet(ai, "aggroRange", 6f);
+            SerializedSet(ai, "contactDamage", 2);
+            SerializedSet(ai, "contactKnockback", 12f);
+            SerializedSet(ai, "jumpForce", 7f);
+            go.AddComponent<EnemyDeath>();
+            return go;
+        }
+
+        private static GameObject SpawnMerkut(Vector2 pos, Sprite sq, PhysicsMaterial2D nf)
+        {
+            var go = MakeMonsterBase("Merkut", sq, nf, pos,
+                new Color(0.45f, 0.6f, 0.85f), new Vector3(0.8f, 0.8f, 1f), 2, 0f);
+            var ai = go.AddComponent<MerkutAI>();
+            SerializedSet(ai, "projectileSprite", sq);
+            go.AddComponent<EnemyDeath>();
+            return go;
+        }
+
         // Ortak canavar gövdesi: sprite + fizik + can + bar + efektler.
         private static GameObject MakeMonsterBase(string name, Sprite sq,
             PhysicsMaterial2D noFriction, Vector2 pos, Color color,
