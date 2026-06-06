@@ -11,7 +11,7 @@ public class ParallaxBackground : MonoBehaviour
         startpos = transform.position.x;
         // Objenin geniþliðini otomatik ölçer (Sonsuz döngü için þart)
         length = GetComponent<SpriteRenderer>().bounds.size.x;
-
+        
         // Eðer kamera atanmamýþsa, sahnedeki Main Camera'yý otomatik bulur
         if (cam == null) cam = Camera.main.gameObject;
     }
