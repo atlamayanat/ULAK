@@ -2632,6 +2632,8 @@ MonoBehaviour:
   groundCheck: {fileID: 539190122}
   groundCheckRadius: 0.15
   coyoteTime: 0.1
+  stompDamage: 1
+  stompJumpMultiplier: 1.35
   dashSpeed: 16
   dashDuration: 0.14
   dashCooldown: 1

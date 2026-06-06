@@ -81,6 +81,13 @@ namespace Ulak.Core
             ShowFrame(_index + 1);
         }
 
+        /// <summary>Idle/koşu kare aralığını çalışma anında değiştirir
+        /// (örn. at hızına orantılı galop temposu).</summary>
+        public void SetFrameInterval(float seconds)
+        {
+            frameInterval = Mathf.Max(0.02f, seconds);
+        }
+
         /// <summary>Saldırı karelerini baştan bir kez oynatır (varsa).</summary>
         public void PlayAttack()
         {

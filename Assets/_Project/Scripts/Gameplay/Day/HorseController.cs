@@ -21,6 +21,12 @@ namespace Ulak.Gameplay
         [Tooltip("Saniye başına hız artışı.")]
         [SerializeField] private float acceleration = 0.9f;
 
+        [Header("Animasyon")]
+        [Tooltip("MAKSİMUM hızdaki kare aralığı (sn) — diğer hızlarda orantılı yavaşlar.")]
+        [SerializeField] private float animIntervalAtMax = 0.11f;
+        [Tooltip("En yavaş animasyon sınırı (tökezleme sonrası bile bundan yavaş oynamaz).")]
+        [SerializeField] private float animIntervalSlowest = 0.45f;
+
         [Header("Tökezleme")]
         [Tooltip("Engele çarpınca hız = baseSpeed × bu çarpan (sonra yeniden hızlanır).")]
         [SerializeField, Range(0.1f, 1f)] private float stumbleFactor = 0.4f;
@@ -33,6 +39,7 @@ namespace Ulak.Gameplay
         [SerializeField] private float coyoteTime = 0.1f;
 
         private Rigidbody2D _rb;
+        private Ulak.Core.SpriteFlipbook _flipbook;
         private float _speed;
         private bool _isGrounded;
         private float _lastGroundedTime;
@@ -46,6 +53,7 @@ namespace Ulak.Gameplay
         private void Awake()
         {
             _rb = GetComponent<Rigidbody2D>();
+            _flipbook = GetComponent<Ulak.Core.SpriteFlipbook>();
             _speed = baseSpeed;
             RideScore.Reset();
 
@@ -75,6 +83,13 @@ namespace Ulak.Gameplay
             // Koştukça hızlan.
             _speed = Mathf.Min(maxSpeed, _speed + acceleration * Time.fixedDeltaTime);
             _rb.linearVelocity = new Vector2(_speed, _rb.linearVelocity.y);
+
+            // Galop temposu hıza orantılı: max hızda en hızlı, yavaşken ağırlaşır.
+            if (_flipbook != null)
+            {
+                float interval = animIntervalAtMax * maxSpeed / Mathf.Max(_speed, 0.5f);
+                _flipbook.SetFrameInterval(Mathf.Clamp(interval, animIntervalAtMax, animIntervalSlowest));
+            }
 
             bool canJump = Time.time - _lastGroundedTime <= coyoteTime && !_jumpedSinceGrounded;
             if (_jumpQueued && canJump)

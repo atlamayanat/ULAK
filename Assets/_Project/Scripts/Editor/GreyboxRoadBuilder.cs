@@ -102,7 +102,7 @@ namespace Ulak.EditorTools
         // ================= GÜNDÜZ MODU: AT KOŞUSU =================
         private const string DayScenePath = "Assets/_Project/Scenes/Road_Day_Greybox.unity";
         private const string HorseIdlePath = "Assets/_Project/Art/Characters/Horse/horse_idle.png";
-        private const string HorseRunPath = "Assets/_Project/Art/Characters/Horse/horse_run.png";
+        private const string HorseRunPath = "Assets/_Project/Art/Characters/Horse/horse_run_rider.png"; // binicili 3 kare (80x72)
 
         [MenuItem("Ulak/Gündüz At Sahnesi Kur")]
         public static void BuildDay()
@@ -204,7 +204,7 @@ namespace Ulak.EditorTools
             // --- At: gerçek sprite varsa onu, yoksa küp placeholder kullan ---
             // horse_idle.png 80x64 (duruş), horse_run.png 160x64 (2 koşu karesi).
             Sprite horseIdle = GetOrCreateSprite(HorseIdlePath, 40f); // 64px / 40 = 1.6 birim boy
-            Sprite[] horseRun = GetOrCreateSheetSprites(HorseRunPath, 80, 64, 40f, "horse_run");
+            Sprite[] horseRun = GetOrCreateSheetSprites(HorseRunPath, 80, 72, 40f, "horse_rider");
             bool hasHorseArt = horseIdle != null;
 
             var horse = new GameObject("Horse");
@@ -1479,7 +1479,7 @@ namespace Ulak.EditorTools
             }
 
             Sprite idle = GetOrCreateSprite(HorseIdlePath, 40f);
-            Sprite[] run = GetOrCreateSheetSprites(HorseRunPath, 80, 64, 40f, "horse_run");
+            Sprite[] run = GetOrCreateSheetSprites(HorseRunPath, 80, 72, 40f, "horse_rider");
             if (idle == null || run == null || run.Length < 2)
                 return "sprite eksik: idle=" + (idle != null) + " run=" + (run?.Length ?? 0);
 
