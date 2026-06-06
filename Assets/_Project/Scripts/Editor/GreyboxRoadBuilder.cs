@@ -583,6 +583,112 @@ namespace Ulak.EditorTools
             return "eklenen otag: " + made;
         }
 
+        // ---- Canavar türlerini gece sahnesine ŞABLON olarak ekle (additive) ----
+        // Karakura: çevik yakın dövüşçü (mor) | Tepegöz: ağır tank (yeşil, iri)
+        // Merküt: uçan okçu (mavi-gri, havada). Kullanıcı Ctrl+D ile çoğaltır.
+        public static string PlaceMonsterTypes()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("Road_Greybox"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(NightScenePath);
+            }
+
+            EnsureLayers();
+            Sprite sq = GetOrCreateSquareSprite();
+            PhysicsMaterial2D noFriction = GetOrCreateNoFrictionMaterial();
+
+            var player = GameObject.Find("Player");
+            float px = player != null ? player.transform.position.x : 0f;
+            float py = player != null ? player.transform.position.y : -1.8f;
+
+            var sb = new System.Text.StringBuilder();
+
+            // --- KARAKURA: hızlı, saldırgan yakın dövüşçü ---
+            if (GameObject.Find("Karakura") == null)
+            {
+                var go = MakeMonsterBase("Karakura", sq, noFriction,
+                    new Vector2(px + 8f, py), new Color(0.6f, 0.2f, 0.75f),
+                    new Vector3(0.9f, 0.9f, 1f), maxHealth: 2, gravity: 3.5f);
+                var ai = go.AddComponent<SmallEnemyAI>();
+                SerializedSet(ai, "moveSpeed", 3.6f);       // çevik
+                SerializedSet(ai, "patrolSpeed", 1.6f);
+                SerializedSet(ai, "aggroRange", 9f);
+                SerializedSet(ai, "loseAggroRange", 14f);   // ısrarcı
+                SerializedSet(ai, "contactCooldown", 0.5f); // sık vurur
+                go.AddComponent<EnemyDeath>();
+                sb.Append("Karakura ");
+            }
+
+            // --- TEPEGÖZ: yavaş, dayanıklı, sert vuran tank ---
+            if (GameObject.Find("Tepegoz") == null)
+            {
+                var go = MakeMonsterBase("Tepegoz", sq, noFriction,
+                    new Vector2(px + 14f, py + 0.4f), new Color(0.3f, 0.5f, 0.25f),
+                    new Vector3(1.6f, 1.6f, 1f), maxHealth: 8, gravity: 3.5f);
+                go.GetComponent<Rigidbody2D>().mass = 3f; // knockback direnci
+                var ai = go.AddComponent<SmallEnemyAI>();
+                SerializedSet(ai, "moveSpeed", 1.2f);       // hantal
+                SerializedSet(ai, "patrolSpeed", 0.6f);
+                SerializedSet(ai, "aggroRange", 6f);
+                SerializedSet(ai, "contactDamage", 2);      // sert vurur
+                SerializedSet(ai, "contactKnockback", 12f);
+                SerializedSet(ai, "jumpForce", 7f);         // ağır, alçak zıplar
+                go.AddComponent<EnemyDeath>();
+                sb.Append("Tepegoz ");
+            }
+
+            // --- MERKÜT: uçan, uzaktan ok atan ---
+            if (GameObject.Find("Merkut") == null)
+            {
+                var go = MakeMonsterBase("Merkut", sq, noFriction,
+                    new Vector2(px + 20f, py + 3.5f), new Color(0.45f, 0.6f, 0.85f),
+                    new Vector3(0.8f, 0.8f, 1f), maxHealth: 2, gravity: 0f);
+                var ai = go.AddComponent<MerkutAI>();
+                SerializedSet(ai, "projectileSprite", sq);
+                go.AddComponent<EnemyDeath>();
+                sb.Append("Merkut ");
+            }
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "eklenen: " + (sb.Length > 0 ? sb.ToString() : "(hepsi zaten vardı)");
+        }
+
+        // Ortak canavar gövdesi: sprite + fizik + can + bar + efektler.
+        private static GameObject MakeMonsterBase(string name, Sprite sq,
+            PhysicsMaterial2D noFriction, Vector2 pos, Color color,
+            Vector3 scale, int maxHealth, float gravity)
+        {
+            var go = new GameObject(name);
+            go.layer = EnemyLayer;
+            go.transform.position = pos;
+            go.transform.localScale = scale;
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sq;
+            sr.color = color;
+            sr.sortingOrder = 9;
+
+            var rb = go.AddComponent<Rigidbody2D>();
+            rb.gravityScale = gravity;
+            rb.freezeRotation = true;
+
+            var col = go.AddComponent<BoxCollider2D>();
+            col.sharedMaterial = noFriction;
+
+            go.AddComponent<Knockback>();
+            go.AddComponent<DamageFlash>();
+
+            var health = go.AddComponent<Health>();
+            SerializedSet(health, "maxHealth", maxHealth);
+            go.AddComponent<HealthBar>();
+
+            return go;
+        }
+
         // ---- Gece sahnesi zemin/engellerini karo dokulara çevir (additive) ----
         // Mevcut objelerin DÜNYA BOYUTLARINI aynen korur; sadece görseli
         // Tiled moda çevirir (doku gerilmez, karo karo tekrarlar) ve
