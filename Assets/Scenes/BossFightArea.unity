@@ -278,12 +278,14 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 0
-  maxHealth: 100
+  maxHealth: 1000
   healthBarFill: {fileID: 1976213019}
   healthBarParent: {fileID: 1718305940}
   baseMoveSpeed: 2
-  meleeRange: 2.5
+  meleeRange: 1.25
   attackCooldown: 2
+  meleeDamage: 3
+  contactDamage: 1
   rangedProjectilePrefab: {fileID: 4786662909464275072, guid: e92ed6a5d0e63104a8f93ec32e5168df, type: 3}
   meleeVisualPrefab: {fileID: 7034560182786739119, guid: 88aeb46439145274b8faa870790b471f, type: 3}
   firePoint: {fileID: 785674497}
