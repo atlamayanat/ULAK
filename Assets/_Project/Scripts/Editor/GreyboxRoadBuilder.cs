@@ -30,6 +30,14 @@ namespace Ulak.EditorTools
         [MenuItem("Ulak/Greybox Yol Sahnesi Kur")]
         public static void Build()
         {
+            // KORUMA: var olan sahnenin üzerine yazmadan önce onay iste
+            // (elle yapılan harita düzenlemeleri geri getirilemez şekilde silinir).
+            if (System.IO.File.Exists("Assets/_Project/Scenes/Road_Greybox.unity") &&
+                !EditorUtility.DisplayDialog("Ulak — DİKKAT",
+                    "Road_Greybox.unity zaten var.\n\nÜzerine yazarsan elle yaptığın TÜM harita düzenlemeleri silinir!",
+                    "Üzerine Yaz", "İptal"))
+                return;
+
             EnsureLayers();
             Sprite sq = GetOrCreateSquareSprite();
             PhysicsMaterial2D noFriction = GetOrCreateNoFrictionMaterial();
@@ -89,6 +97,340 @@ namespace Ulak.EditorTools
             EditorUtility.DisplayDialog("Ulak",
                 "Greybox yol sahnesi kuruldu.\n\nKontroller:\n• A/D veya ok tuşları → hareket\n• Space / W / yukarı ok → zıpla\n• Sağ tık → kılıç saldırısı\n• H → can yenile (3 yük gerekir)\n\nPlay'e bas ve test et.",
                 "Tamam");
+        }
+
+        // ================= GÜNDÜZ MODU: AT KOŞUSU =================
+        private const string DayScenePath = "Assets/_Project/Scenes/Road_Day_Greybox.unity";
+        private const string HorseIdlePath = "Assets/_Project/Art/Characters/Horse/horse_idle.png";
+        private const string HorseRunPath = "Assets/_Project/Art/Characters/Horse/horse_run.png";
+
+        [MenuItem("Ulak/Gündüz At Sahnesi Kur")]
+        public static void BuildDay()
+        {
+            if (System.IO.File.Exists(DayScenePath) &&
+                !EditorUtility.DisplayDialog("Ulak — DİKKAT",
+                    "Road_Day_Greybox.unity zaten var.\n\nÜzerine yazarsan elle yaptığın TÜM düzenlemeler silinir!",
+                    "Üzerine Yaz", "İptal"))
+                return;
+
+            BuildDayCore();
+
+            EditorUtility.DisplayDialog("Ulak",
+                "Gündüz at sahnesi kuruldu.\n\n• At otomatik koşar ve giderek hızlanır\n• 2 blokluk hendeklerden zıplayarak aş (Space/W/yukarı)\n• Boşluklara düşersen ÖLÜRSÜN — sahne baştan başlar\n• Sağ tık → kılıçla altın kutuları kır (+10 puan)\n\nPlay'e bas ve test et.",
+                "Tamam");
+        }
+
+        /// <summary>Sahneyi onaysız kurar (programatik çağrılar için).</summary>
+        public static void BuildDayCore()
+        {
+            EnsureLayers();
+            Sprite sq = GetOrCreateSquareSprite();
+            PhysicsMaterial2D noFriction = GetOrCreateNoFrictionMaterial();
+            Sprite engel = GetOrCreateSprite(EngelPath, 52f);
+
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            // --- Kamera (at hızlı: önü daha geniş görsün) ---
+            var camGo = new GameObject("Main Camera");
+            camGo.tag = "MainCamera";
+            var cam = camGo.AddComponent<Camera>();
+            cam.orthographic = true;
+            cam.orthographicSize = 5f;
+            cam.backgroundColor = new Color(0.45f, 0.7f, 0.95f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            camGo.transform.position = new Vector3(0, 0, -10);
+            var follow = camGo.AddComponent<CameraFollow>();
+            SerializedSet(follow, "offset", new Vector3(4f, 0f, -10f));
+
+            // --- Gökyüzü: gün doğumu kayması KAPALI → sabit gündüz ---
+            BuildSky(cam);
+            var skyGo = GameObject.Find("Sky");
+            if (skyGo != null)
+                SerializedSet(skyGo.GetComponent<SkyBackground>(), "sunriseDuration", 0f);
+
+            // ====== SEVİYE TASARIMI ======
+            // Boşluklar (çukurlar): merkez X + genişlik. Düşen ölür, sahne yeniden başlar.
+            float[] pitX = { 48f, 100f, 155f, 215f, 275f, 335f };
+            const float pitW = 2.8f;
+
+            // Hendekler (2 blok = 2 birim yüksek): at zıplayarak aşar.
+            float[] obstacleX = { 25f, 72f, 128f, 185f, 245f, 305f, 358f };
+
+            var groundColor = new Color(0.45f, 0.4f, 0.3f);
+
+            // --- Zemin: çukurların arasında parçalı segmentler ---
+            float levelStart = -20f, levelEnd = 390f;
+            float segStart = levelStart;
+            int segIndex = 0;
+            foreach (float px in pitX)
+            {
+                float gapL = px - pitW * 0.5f;
+                float segW = gapL - segStart;
+                MakeBox("Ground_" + segIndex++, new Vector2(segStart + segW * 0.5f, -3f),
+                    new Vector2(segW, 1f), groundColor, sq, GroundLayer, isStatic: true);
+                segStart = px + pitW * 0.5f;
+            }
+            MakeBox("Ground_" + segIndex, new Vector2(segStart + (levelEnd - segStart) * 0.5f, -3f),
+                new Vector2(levelEnd - segStart, 1f), groundColor, sq, GroundLayer, isStatic: true);
+
+            // --- Hendekler: 2 blok yüksek (1 x 2), zemin üstüne oturur ---
+            for (int i = 0; i < obstacleX.Length; i++)
+            {
+                MakeBox("Obstacle_" + i, new Vector2(obstacleX[i], -1.5f), new Vector2(1f, 2f),
+                    engel != null ? Color.white : new Color(0.5f, 0.42f, 0.3f),
+                    engel != null ? engel : sq, GroundLayer, isStatic: true);
+            }
+
+            // --- Altın kutular: hendek diplerinden ve çukurlardan UZAK ---
+            for (int i = 0; i < 24; i++)
+            {
+                float x = 12f + i * 15.5f;
+                if (x > levelEnd - 10f) break;
+
+                // Hendeğe 5 birimden yakınsa koyma.
+                bool nearObstacle = false;
+                foreach (float ox in obstacleX)
+                    if (Mathf.Abs(x - ox) < 5f) { nearObstacle = true; break; }
+
+                // Çukura (kenarları dahil) 4 birimden yakınsa koyma.
+                bool nearPit = false;
+                foreach (float px in pitX)
+                    if (Mathf.Abs(x - px) < pitW * 0.5f + 4f) { nearPit = true; break; }
+
+                if (!nearObstacle && !nearPit)
+                    BuildGoldBox(sq, new Vector2(x, -2.1f));
+            }
+
+            // --- At: gerçek sprite varsa onu, yoksa küp placeholder kullan ---
+            // horse_idle.png 80x64 (duruş), horse_run.png 160x64 (2 koşu karesi).
+            Sprite horseIdle = GetOrCreateSprite(HorseIdlePath, 40f); // 64px / 40 = 1.6 birim boy
+            Sprite[] horseRun = GetOrCreateSheetSprites(HorseRunPath, 80, 64, 40f, "horse_run");
+            bool hasHorseArt = horseIdle != null;
+
+            var horse = new GameObject("Horse");
+            horse.tag = "Player";
+            horse.transform.position = new Vector2(0f, -1.85f);
+            if (!hasHorseArt)
+                horse.transform.localScale = new Vector3(1.6f, 1.2f, 1f);
+
+            var hsr = horse.AddComponent<SpriteRenderer>();
+            hsr.sprite = hasHorseArt ? horseIdle : sq;
+            hsr.color = hasHorseArt ? Color.white : new Color(0.55f, 0.38f, 0.22f);
+            hsr.sortingOrder = 10;
+
+            if (hasHorseArt && horseRun != null && horseRun.Length >= 2)
+            {
+                var hBook = horse.AddComponent<SpriteFlipbook>();
+                // Koşu efekti: 2 kare ard arda (her zaman koşuyor → idle seti olarak ata).
+                SerializedSet(hBook, "frames", horseRun);
+                SerializedSet(hBook, "frameInterval", 0.16f); // dörtnal temposu
+            }
+
+            var hrb = horse.AddComponent<Rigidbody2D>();
+            hrb.gravityScale = 3.5f;
+            hrb.freezeRotation = true;
+            hrb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            hrb.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+            var hcol = horse.AddComponent<BoxCollider2D>();
+            hcol.sharedMaterial = noFriction;
+            if (hasHorseArt)
+            {
+                // Gövdeye göre hitbox (at.png dolu alanı ~65x59 px @40ppu).
+                hcol.size = new Vector2(1.5f, 1.45f);
+                hcol.offset = new Vector2(-0.13f, -0.05f);
+            }
+
+            var hFeet = new GameObject("GroundCheck");
+            hFeet.transform.SetParent(horse.transform, false);
+            hFeet.transform.localPosition = new Vector3(0, hasHorseArt ? -0.82f : -0.55f, 0);
+
+            var hc = horse.AddComponent<HorseController>();
+            SerializedSet(hc, "groundCheck", hFeet.transform);
+            SerializedSet(hc, "groundLayer", (LayerMask)(1 << GroundLayer));
+            // 2 blokluk hendeği rahat aşsın (13 → sınırda kalıyordu).
+            SerializedSet(hc, "jumpForce", 14.5f);
+
+            // Boşluğa düşünce ölüm → sahne baştan.
+            horse.AddComponent<FallDeath>();
+
+            var hAtk = horse.AddComponent<SwordAttack>();
+            SerializedSet(hAtk, "targetLayers", (LayerMask)(1 << EnemyLayer));
+            SerializedSet(hAtk, "hitboxOffset", new Vector2(1.2f, 0f));
+
+            // Savurma efekti at için de
+            Sprite slash = GetOrCreateCharacterSprite(SlashArcPath);
+            if (slash != null)
+            {
+                var slashGo = new GameObject("SlashVisual");
+                slashGo.transform.SetParent(horse.transform, false);
+                slashGo.transform.localPosition = new Vector3(1.2f, 0f, 0f);
+                var ssr2 = slashGo.AddComponent<SpriteRenderer>();
+                ssr2.sprite = slash;
+                ssr2.sortingOrder = 12;
+                slashGo.SetActive(false);
+                SerializedSet(hAtk, "slashVisual", slashGo);
+            }
+
+            horse.AddComponent<ScoreHUD>();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            System.IO.Directory.CreateDirectory(Application.dataPath + "/_Project/Scenes");
+            EditorSceneManager.SaveScene(scene, DayScenePath);
+
+            // Sahneyi Build Settings'e ekle (FallDeath'in LoadScene'i için gerekli).
+            RegisterSceneInBuildSettings(DayScenePath);
+
+            Debug.Log("[Ulak] Gündüz at sahnesi kuruldu → " + DayScenePath);
+        }
+
+        // ---- Sahneyi Build Settings listesine ekle (yoksa) ----
+        private static void RegisterSceneInBuildSettings(string scenePath)
+        {
+            var scenes = EditorBuildSettings.scenes.ToList();
+            if (scenes.Any(s => s.path == scenePath)) return;
+            scenes.Add(new EditorBuildSettingsScene(scenePath, true));
+            EditorBuildSettings.scenes = scenes.ToArray();
+        }
+
+        // ---- Gökyüzü dekoru: bulutlar (gece+gündüz) ve kuşlar (sadece gündüz) ----
+        // Additive: sahnelerdeki mevcut objelere dokunmaz, yalnızca SkyDecor
+        // grubunu (varsa eskisini silip) yeniden ekler. Yeniden çalıştırılabilir.
+        private const string NightScenePath = "Assets/_Project/Scenes/Road_Greybox.unity";
+
+        public static string ScatterSkyDecor()
+        {
+            EditorSceneManager.SaveOpenScenes();
+            int night = DecorateScene(NightScenePath, -15f, 45f, withBirds: false);
+            int day = DecorateScene(DayScenePath, -15f, 385f, withBirds: true);
+            return "gece dekor=" + night + " gunduz dekor=" + day;
+        }
+
+        private static int DecorateScene(string scenePath, float xMin, float xMax, bool withBirds)
+        {
+            if (!System.IO.File.Exists(scenePath)) return -1;
+            var scene = EditorSceneManager.OpenScene(scenePath);
+
+            // Eski dekoru kaldır (yeniden çalıştırılabilirlik).
+            foreach (var root in scene.GetRootGameObjects())
+                if (root.name == "SkyDecor")
+                    Object.DestroyImmediate(root);
+
+            var parent = new GameObject("SkyDecor");
+
+            var clouds = new Sprite[6];
+            for (int i = 0; i < 6; i++)
+                clouds[i] = GetOrCreateSprite(
+                    $"Assets/_Project/Art/Environment/Sky/cloud{i + 1}.png", 32f);
+
+            int made = 0;
+            int count = Mathf.RoundToInt((xMax - xMin) / 13f);
+            for (int i = 0; i < count; i++)
+            {
+                var spr = clouds[i % 6];
+                if (spr == null) continue;
+
+                // Deterministik ama düzensiz görünümlü yerleşim.
+                float x = xMin + i * 13f + ((i * 37) % 9) - 4f;
+                float y = 1.3f + ((i * 53) % 28) / 10f;   // 1.3 .. 4.0
+                float s = 0.8f + ((i * 29) % 7) / 10f;    // 0.8 .. 1.4
+
+                var go = new GameObject("Cloud_" + i);
+                go.transform.SetParent(parent.transform);
+                go.transform.position = new Vector3(x, y, 0f);
+                go.transform.localScale = new Vector3(s, s, 1f);
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = spr;
+                sr.sortingOrder = -90; // gökyüzünün önü, oyunun arkası
+                made++;
+            }
+
+            if (withBirds)
+            {
+                var birds = GetOrCreateSprite("Assets/_Project/Art/Environment/Sky/birds1.png", 16f);
+                if (birds != null)
+                {
+                    int flocks = Mathf.Max(1, count / 3);
+                    for (int i = 0; i < flocks; i++)
+                    {
+                        float x = xMin + 10f + i * 40f + ((i * 31) % 11);
+                        float y = 2.4f + ((i * 47) % 16) / 10f; // 2.4 .. 3.9
+                        var go = new GameObject("Birds_" + i);
+                        go.transform.SetParent(parent.transform);
+                        go.transform.position = new Vector3(x, y, 0f);
+                        var sr = go.AddComponent<SpriteRenderer>();
+                        sr.sprite = birds;
+                        sr.sortingOrder = -75; // bulutların önünde
+                        made++;
+                    }
+                }
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return made;
+        }
+
+        // ---- At görsellerini AÇIK gündüz sahnesine additive uygula ----
+        // (Sahneyi yeniden kurmaz; mevcut Horse objesini günceller.)
+        public static string IntegrateHorseArt()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("Road_Day_Greybox"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(DayScenePath);
+            }
+
+            Sprite idle = GetOrCreateSprite(HorseIdlePath, 40f);
+            Sprite[] run = GetOrCreateSheetSprites(HorseRunPath, 80, 64, 40f, "horse_run");
+            if (idle == null || run == null || run.Length < 2)
+                return "sprite eksik: idle=" + (idle != null) + " run=" + (run?.Length ?? 0);
+
+            var horse = GameObject.Find("Horse");
+            if (horse == null) return "Horse objesi yok";
+
+            horse.transform.localScale = Vector3.one;
+
+            var sr = horse.GetComponent<SpriteRenderer>();
+            sr.sprite = idle;
+            sr.color = Color.white;
+
+            var col = horse.GetComponent<BoxCollider2D>();
+            col.size = new Vector2(1.5f, 1.45f);
+            col.offset = new Vector2(-0.13f, -0.05f);
+
+            var feet = horse.transform.Find("GroundCheck");
+            if (feet != null) feet.localPosition = new Vector3(0f, -0.82f, 0f);
+
+            var book = horse.GetComponent<SpriteFlipbook>();
+            if (book == null) book = horse.AddComponent<SpriteFlipbook>();
+            SerializedSet(book, "frames", run);
+            SerializedSet(book, "frameInterval", 0.16f);
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "at entegre edildi, kosu karesi=" + run.Length;
+        }
+
+        // ---- Altın kutu (kılıçla kırılır, çarpınca etkisiz) ----
+        private static void BuildGoldBox(Sprite sq, Vector2 pos)
+        {
+            var go = new GameObject("GoldBox");
+            go.layer = EnemyLayer; // SwordAttack'ın hedef katmanı
+            go.transform.position = pos;
+            go.transform.localScale = new Vector3(0.5f, 0.5f, 1f);
+
+            var sr = go.AddComponent<SpriteRenderer>();
+            sr.sprite = sq;
+            sr.color = new Color(1f, 0.84f, 0.2f); // altın sarısı
+            sr.sortingOrder = 5;
+
+            var col = go.AddComponent<BoxCollider2D>();
+            col.isTrigger = true; // ata çarpmaz, içinden geçilir
+
+            go.AddComponent<GoldBox>();
         }
 
         // ---- Oyuncu kurulumu ----
@@ -275,27 +617,37 @@ namespace Ulak.EditorTools
             return AssetDatabase.LoadAssetAtPath<Sprite>(path);
         }
 
-        // ---- Yürüme kareleri: 128x48 sheet'i 2 adet 64x48 kareye dilimle ----
+        // ---- Oyuncu yürüme kareleri ----
         private static Sprite[] GetOrCreateWalkSprites()
+            => GetOrCreateSheetSprites(PlayerWalkPath, 64, 48, 32f, "player_walk");
+
+        // ---- Genel sheet dilimleyici: yatay dizilmiş eşit kareler ----
+        public static Sprite[] GetOrCreateSheetSprites(
+            string path, int frameW, int frameH, float ppu, string namePrefix)
         {
-            var imp = AssetImporter.GetAtPath(PlayerWalkPath) as TextureImporter;
+            var imp = AssetImporter.GetAtPath(path) as TextureImporter;
             if (imp == null)
             {
-                Debug.LogWarning("[Ulak] Yürüme sheet'i bulunamadı: " + PlayerWalkPath);
+                Debug.LogWarning("[Ulak] Sheet bulunamadı: " + path);
                 return null;
             }
 
             bool needsSetup = imp.textureType != TextureImporterType.Sprite
                               || imp.spriteImportMode != SpriteImportMode.Multiple
-                              || !Mathf.Approximately(imp.spritePixelsPerUnit, 32f);
+                              || !Mathf.Approximately(imp.spritePixelsPerUnit, ppu);
             if (needsSetup)
             {
                 imp.textureType = TextureImporterType.Sprite;
                 imp.spriteImportMode = SpriteImportMode.Multiple;
-                imp.spritePixelsPerUnit = 32f;
+                imp.spritePixelsPerUnit = ppu;
                 imp.filterMode = FilterMode.Point;
                 imp.textureCompression = TextureImporterCompression.Uncompressed;
                 imp.mipmapEnabled = false;
+
+                // Kare sayısını dokunun genişliğinden türet.
+                int texW = frameW, texH = frameH;
+                imp.GetSourceTextureWidthAndHeight(out texW, out texH);
+                int count = Mathf.Max(1, texW / frameW);
 
                 // Modern dilimleme API'si (ISpriteEditorDataProvider).
                 var factory = new SpriteDataProviderFactories();
@@ -303,13 +655,13 @@ namespace Ulak.EditorTools
                 var dp = factory.GetSpriteEditorDataProviderFromObject(imp);
                 dp.InitSpriteEditorDataProvider();
 
-                var rects = new SpriteRect[2];
-                for (int i = 0; i < 2; i++)
+                var rects = new SpriteRect[count];
+                for (int i = 0; i < count; i++)
                 {
                     rects[i] = new SpriteRect
                     {
-                        name = "player_walk_" + i,
-                        rect = new Rect(i * 64, 0, 64, 48),
+                        name = namePrefix + "_" + i,
+                        rect = new Rect(i * frameW, 0, frameW, frameH),
                         alignment = SpriteAlignment.Center,
                         pivot = new Vector2(0.5f, 0.5f),
                         spriteID = GUID.Generate()
@@ -331,7 +683,7 @@ namespace Ulak.EditorTools
                 imp.SaveAndReimport();
             }
 
-            return AssetDatabase.LoadAllAssetRepresentationsAtPath(PlayerWalkPath)
+            return AssetDatabase.LoadAllAssetRepresentationsAtPath(path)
                 .OfType<Sprite>()
                 .OrderBy(s => s.name)
                 .ToArray();
