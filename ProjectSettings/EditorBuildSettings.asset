@@ -17,6 +17,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MainMenu.unity
     guid: 21b77259c0343b74fb79b5444920d29c
+  - enabled: 1
+    path: Assets/_Project/Scenes/UmayKoy.unity
+    guid: 422e4c919a89e5640871a0126ec20c1a
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}

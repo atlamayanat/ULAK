@@ -410,6 +410,179 @@ namespace Ulak.EditorTools
             return "tilki eklendi, kosu karesi=" + run.Length;
         }
 
+        // ================= KÖY SAHNESİ: UMAY KÖY =================
+        private const string UmayKoyScenePath = "Assets/_Project/Scenes/UmayKoy.unity";
+        private const string TentPath = "Assets/_Project/Art/Environment/Village/large_tent.png";
+        private const string UnarmedIdle0Path = "Assets/_Project/Art/Characters/Player/player_unarmed_0.png";
+        private const string UnarmedIdle1Path = "Assets/_Project/Art/Characters/Player/player_unarmed_1.png";
+
+        [MenuItem("Ulak/Umay Koy Sahnesi Kur")]
+        public static void BuildUmayKoy()
+        {
+            if (System.IO.File.Exists(UmayKoyScenePath) &&
+                !EditorUtility.DisplayDialog("Ulak — DİKKAT",
+                    "UmayKoy.unity zaten var.\n\nÜzerine yazarsan elle yaptığın TÜM düzenlemeler silinir!",
+                    "Üzerine Yaz", "İptal"))
+                return;
+
+            BuildUmayKoyCore();
+
+            EditorUtility.DisplayDialog("Ulak",
+                "Umay Köy sahnesi kuruldu.\n\n• Silahsız karakter (A/D hareket, zıplama)\n• Düz çimenli zemin\n• 4 çadır — Hierarchy'den taşıyıp çoğaltarak köyü kur\n\nDüzenlemeler sende!",
+                "Tamam");
+        }
+
+        /// <summary>Köy sahnesini onaysız kurar (programatik çağrılar için).</summary>
+        public static void BuildUmayKoyCore()
+        {
+            EnsureLayers();
+            Sprite sq = GetOrCreateSquareSprite();
+            PhysicsMaterial2D noFriction = GetOrCreateNoFrictionMaterial();
+
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            // --- Kamera ---
+            var camGo = new GameObject("Main Camera");
+            camGo.tag = "MainCamera";
+            var cam = camGo.AddComponent<Camera>();
+            cam.orthographic = true;
+            cam.orthographicSize = 5f;
+            cam.backgroundColor = new Color(0.55f, 0.75f, 0.9f);
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            camGo.transform.position = new Vector3(0, 0, -10);
+            var follow = camGo.AddComponent<CameraFollow>();
+            SerializedSet(follow, "offset", new Vector3(2f, 0f, -10f));
+
+            // --- Gökyüzü: sabit gündüz ---
+            BuildSky(cam);
+            var skyGo = GameObject.Find("Sky");
+            if (skyGo != null)
+                SerializedSet(skyGo.GetComponent<SkyBackground>(), "sunriseDuration", 0f);
+
+            // --- Düz zemin: çimenli karo, TiledBoxSync'li (elle uzatılabilir) ---
+            Sprite grass = GetOrCreateTileSprite("Assets/_Project/Art/Environment/Tiles/grass_ground.jpeg");
+            var ground = new GameObject("Ground");
+            ground.layer = GroundLayer;
+            ground.isStatic = true;
+            ground.transform.position = new Vector2(30f, -3f);
+            var gsr = ground.AddComponent<SpriteRenderer>();
+            if (grass != null)
+            {
+                gsr.sprite = grass;
+                gsr.drawMode = SpriteDrawMode.Tiled;
+                gsr.size = new Vector2(120f, 1f);
+            }
+            else
+            {
+                gsr.sprite = sq;
+                gsr.color = new Color(0.35f, 0.5f, 0.25f);
+                ground.transform.localScale = new Vector3(120f, 1f, 1f);
+            }
+            var gcol = ground.AddComponent<BoxCollider2D>();
+            gcol.size = new Vector2(120f, 1f);
+            ground.AddComponent<TiledBoxSync>();
+
+            // --- Çadırlar: dekoratif nesneler (kullanıcı taşıyıp çoğaltacak) ---
+            Sprite tent = GetOrCreateSprite(TentPath, 48f); // 96x128 → 2 x 2.67 birim
+            if (tent != null)
+            {
+                float[] tentX = { 6f, 14f, 22f, 30f };
+                for (int i = 0; i < tentX.Length; i++)
+                {
+                    var t = new GameObject("Tent_" + i);
+                    t.transform.position = new Vector2(tentX[i], -1.17f); // zemine oturur
+                    var tsr = t.AddComponent<SpriteRenderer>();
+                    tsr.sprite = tent;
+                    tsr.sortingOrder = 1; // oyuncunun arkasında
+                }
+            }
+            else
+            {
+                Debug.LogWarning("[Ulak] Çadır görseli yüklenemedi: " + TentPath);
+            }
+
+            // --- Silahsız oyuncu ---
+            Sprite u0 = GetOrCreateCharacterSprite(UnarmedIdle0Path);
+            Sprite u1 = GetOrCreateCharacterSprite(UnarmedIdle1Path);
+            bool hasArt = u0 != null;
+
+            var player = new GameObject("Player");
+            player.tag = "Player";
+            player.transform.position = new Vector2(0f, -1.7f);
+
+            var psr = player.AddComponent<SpriteRenderer>();
+            psr.sprite = hasArt ? u0 : sq;
+            psr.color = hasArt ? Color.white : new Color(0.3f, 0.6f, 1f);
+            psr.sortingOrder = 10;
+
+            if (hasArt && u1 != null)
+            {
+                var book = player.AddComponent<SpriteFlipbook>();
+                SerializedSet(book, "frames", new[] { u0, u1 });
+            }
+
+            var rb = player.AddComponent<Rigidbody2D>();
+            rb.gravityScale = 3.5f;
+            rb.freezeRotation = true;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+
+            var col = player.AddComponent<BoxCollider2D>();
+            col.sharedMaterial = noFriction;
+            if (hasArt) col.size = new Vector2(0.47f, 1.5f);
+
+            var feet = new GameObject("GroundCheck");
+            feet.transform.SetParent(player.transform, false);
+            feet.transform.localPosition = new Vector3(0, -0.78f, 0);
+
+            var pc = player.AddComponent<PlayerController>();
+            SerializedSet(pc, "groundCheck", feet.transform);
+            SerializedSet(pc, "groundLayer", (LayerMask)(1 << GroundLayer));
+            // Köyde kılıç yok: SwordAttack / Health / KillCharges bilerek eklenmedi.
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            System.IO.Directory.CreateDirectory(Application.dataPath + "/_Project/Scenes");
+            EditorSceneManager.SaveScene(scene, UmayKoyScenePath);
+            RegisterSceneInBuildSettings(UmayKoyScenePath);
+
+            Debug.Log("[Ulak] Umay Köy sahnesi kuruldu → " + UmayKoyScenePath);
+        }
+
+        // ---- 3 otağ çadırını Umay Köy sahnesine additive ekle ----
+        public static string PlaceYurts()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("UmayKoy"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(UmayKoyScenePath);
+            }
+
+            int made = 0;
+            for (int i = 1; i <= 3; i++)
+            {
+                string name = "Yurt_" + i;
+                if (GameObject.Find(name) != null) continue; // varsa dokunma
+
+                Sprite spr = GetOrCreateSprite(
+                    $"Assets/_Project/Art/Environment/Village/cadir{i}.png", 48f);
+                if (spr == null) continue;
+
+                var go = new GameObject(name);
+                // 256x160 @48ppu → 5.3 x 3.3 birim; zemin üstüne oturt.
+                go.transform.position = new Vector2(34f + i * 8f, -0.83f);
+                var sr = go.AddComponent<SpriteRenderer>();
+                sr.sprite = spr;
+                sr.sortingOrder = 1; // oyuncunun arkasında
+                made++;
+            }
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "eklenen otag: " + made;
+        }
+
         // ---- Gece sahnesi zemin/engellerini karo dokulara çevir (additive) ----
         // Mevcut objelerin DÜNYA BOYUTLARINI aynen korur; sadece görseli
         // Tiled moda çevirir (doku gerilmez, karo karo tekrarlar) ve
