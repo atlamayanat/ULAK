@@ -30,6 +30,12 @@ namespace Ulak.Gameplay
         [Tooltip("Yere değdikten sonra zıplamaya izin verilen tampon süre (coyote time).")]
         [SerializeField] private float coyoteTime = 0.1f;
 
+        [Header("Kafa Sıçraması")]
+        [Tooltip("Canavar kafasından zıplarken canavara verilen hasar.")]
+        [SerializeField] private int stompDamage = 1;
+        [Tooltip("Canavar kafasından zıplamanın normal zıplamaya göre çarpanı.")]
+        [SerializeField] private float stompJumpMultiplier = 1.35f;
+
         [Header("Dash")]
         [Tooltip("Atılma hızı (bakılan yöne).")]
         [SerializeField] private float dashSpeed = 16f;
@@ -42,6 +48,7 @@ namespace Ulak.Gameplay
         private Knockback _knockback;
         private SpriteFlipbook _flipbook;
         private bool _isGrounded;
+        private Collider2D _groundCollider; // üstünde durulan şey (zemin ya da canavar)
         private float _lastGroundedTime;
         private bool _jumpQueued;
         private bool _jumpedSinceGrounded;
@@ -68,11 +75,16 @@ namespace Ulak.Gameplay
                 if (t != null) groundCheck = t;
             }
             // "Her şey" maskesi kendi collider'ımızı zemin sayar → sınırsız zıplama.
-            // Ground layer'a daralt.
+            // Ground + Enemy'ye daralt: düşman kafası da zıplanabilir zemin —
+            // canavar üstüne düşünce sıkışmak yerine zıplayıp kurtulursun.
             if (groundLayer.value == -1 || groundLayer.value == 0)
             {
                 int g = LayerMask.NameToLayer("Ground");
-                if (g >= 0) groundLayer = 1 << g;
+                int e = LayerMask.NameToLayer("Enemy");
+                int mask = 0;
+                if (g >= 0) mask |= 1 << g;
+                if (e >= 0) mask |= 1 << e;
+                if (mask != 0) groundLayer = mask;
             }
         }
 
@@ -126,8 +138,20 @@ namespace Ulak.Gameplay
             bool canJump = Time.time - _lastGroundedTime <= coyoteTime && !_jumpedSinceGrounded;
             if (_jumpQueued && canJump && !locked)
             {
+                float force = jumpForce;
+
+                // KAFA SIÇRAMASI: canavar üstünden zıplıyorsak hasar ver + daha yükseğe fırla.
+                if (_groundCollider != null
+                    && _groundCollider.gameObject.layer == LayerMask.NameToLayer("Enemy"))
+                {
+                    var dmg = _groundCollider.GetComponentInParent<IDamageable>();
+                    if (dmg != null && dmg.IsAlive)
+                        dmg.TakeDamage(stompDamage, Vector2.down * 3f); // ezme hissi
+                    force *= stompJumpMultiplier;
+                }
+
                 _rb.linearVelocity = new Vector2(_rb.linearVelocity.x, 0f);
-                _rb.AddForce(Vector2.up * jumpForce, ForceMode2D.Impulse);
+                _rb.AddForce(Vector2.up * force, ForceMode2D.Impulse);
                 _jumpedSinceGrounded = true; // yere değene kadar tekrar zıplama yok
             }
             _jumpQueued = false;
@@ -139,7 +163,8 @@ namespace Ulak.Gameplay
                 ? (Vector2)groundCheck.position
                 : (Vector2)transform.position + Vector2.down * 0.5f;
 
-            _isGrounded = Physics2D.OverlapCircle(point, groundCheckRadius, groundLayer);
+            _groundCollider = Physics2D.OverlapCircle(point, groundCheckRadius, groundLayer);
+            _isGrounded = _groundCollider != null;
             if (_isGrounded)
             {
                 _lastGroundedTime = Time.time;

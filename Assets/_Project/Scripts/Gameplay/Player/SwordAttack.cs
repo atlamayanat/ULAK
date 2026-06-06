@@ -21,10 +21,12 @@ namespace Ulak.Gameplay
 
         [Header("Hitbox (yerel uzayda, +X = bakılan yön)")]
         [Tooltip("Hitbox merkezinin oyuncuya göre ofseti (X, bakılan yöne çevrilir).")]
-        [SerializeField] private Vector2 hitboxOffset = new Vector2(0.9f, 0f);
-        [SerializeField] private Vector2 hitboxSize = new Vector2(1.6f, 1.3f);
+        [SerializeField] private Vector2 hitboxOffset = new Vector2(1.1f, 0f);
+        [SerializeField] private Vector2 hitboxSize = new Vector2(2.0f, 1.4f);
         [Tooltip("Vurulabilen layer'lar (düşmanlar / kırılabilir engeller).")]
         [SerializeField] private LayerMask targetLayers = ~0;
+        [Tooltip("Vuruşu engelleyen katmanlar (duvar/zemin) — arkasındakine vurulamaz.")]
+        [SerializeField] private LayerMask obstructionLayers;
 
         [Header("Geri savurma")]
         [SerializeField] private float knockbackForce = 18f;
@@ -52,6 +54,13 @@ namespace Ulak.Gameplay
             {
                 int e = LayerMask.NameToLayer("Enemy");
                 if (e >= 0) targetLayers = 1 << e;
+            }
+
+            // Engelleyici katman boşsa Ground'a bağla (duvar arkasına vuruş yok).
+            if (obstructionLayers.value == 0 || obstructionLayers.value == -1)
+            {
+                int g = LayerMask.NameToLayer("Ground");
+                if (g >= 0) obstructionLayers = 1 << g;
             }
         }
 
@@ -82,6 +91,13 @@ namespace Ulak.Gameplay
 
                 var dmg = col.GetComponentInParent<IDamageable>();
                 if (dmg == null || !dmg.IsAlive) continue;
+
+                // Görüş hattı: oyuncu ile hedef arasında duvar/zemin varsa vuruş İŞLEMEZ.
+                Vector2 origin = transform.position;
+                Vector2 targetPt = col.bounds.center;
+                float dist = Vector2.Distance(origin, targetPt);
+                var block = Physics2D.Raycast(origin, (targetPt - origin).normalized, dist, obstructionLayers);
+                if (block.collider != null) continue;
 
                 // Knockback yönü: hedefe doğru yatay + biraz yukarı.
                 float dirX = Mathf.Sign(col.bounds.center.x - transform.position.x);

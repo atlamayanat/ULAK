@@ -537,7 +537,7 @@ namespace Ulak.EditorTools
 
             var pc = player.AddComponent<PlayerController>();
             SerializedSet(pc, "groundCheck", feet.transform);
-            SerializedSet(pc, "groundLayer", (LayerMask)(1 << GroundLayer));
+            SerializedSet(pc, "groundLayer", (LayerMask)((1 << GroundLayer) | (1 << EnemyLayer))); // düşman kafası da zemin
             // Köyde kılıç yok: SwordAttack / Health / KillCharges bilerek eklenmedi.
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -816,7 +816,71 @@ namespace Ulak.EditorTools
             var ai = go.AddComponent<MerkutAI>();
             SerializedSet(ai, "projectileSprite", sq);
             go.AddComponent<EnemyDeath>();
+            ApplyMerkutVisual(go);
             return go;
+        }
+
+        // ---- Kartal görsellerini bir Merküt objesine uygula ----
+        private static bool ApplyMerkutVisual(GameObject go)
+        {
+            // 240x64 sheet = 3 kanat çırpma karesi (80x64). Kartal SOLA bakar.
+            Sprite[] fly = GetOrCreateSheetSprites(
+                "Assets/_Project/Art/Characters/Enemies/kartal.png", 80, 64, 50f, "kartal");
+            Sprite orb = GetOrCreateSprite("Assets/_Project/Art/VFX/red_orb.png", 16f);
+            if (fly == null || fly.Length < 2) return false;
+
+            go.transform.localScale = Vector3.one; // 80x64 @50ppu = 1.6 x 1.28
+
+            var sr = go.GetComponent<SpriteRenderer>();
+            sr.sprite = fly[0];
+            sr.color = Color.white;
+
+            var col = go.GetComponent<BoxCollider2D>();
+            if (col != null)
+            {
+                col.size = new Vector2(1.4f, 0.9f); // kanat açıklığına göre yassı gövde
+                col.offset = Vector2.zero;
+            }
+
+            var book = go.GetComponent<SpriteFlipbook>();
+            if (book == null) book = go.AddComponent<SpriteFlipbook>();
+            SerializedSet(book, "frames", fly);
+            SerializedSet(book, "frameInterval", 0.14f); // kanat çırpma
+
+            var ai = go.GetComponent<MerkutAI>();
+            if (ai != null)
+            {
+                SerializedSet(ai, "spriteFacesRight", true); // kartal görseli SAĞA bakar
+                if (orb != null) SerializedSet(ai, "projectileSprite", orb); // kırmızı top
+            }
+
+            var bar = go.GetComponent<HealthBar>();
+            if (bar != null) SerializedSet(bar, "offset", new Vector2(0f, 0.85f));
+
+            return true;
+        }
+
+        // ---- Sahnedeki TÜM Merküt küplerini kartala çevir (additive) ----
+        public static string ApplyMerkutArtToScene()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("Road_Greybox"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene(NightScenePath);
+            }
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            int n = 0;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                if (!root.name.StartsWith("Merkut")) continue;
+                if (ApplyMerkutVisual(root)) n++;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "kartala cevrilen Merkut: " + n;
         }
 
         // Ortak canavar gövdesi: sprite + fizik + can + bar + efektler.
@@ -846,7 +910,11 @@ namespace Ulak.EditorTools
 
             var health = go.AddComponent<Health>();
             SerializedSet(health, "maxHealth", maxHealth);
-            go.AddComponent<HealthBar>();
+
+            // Canavar barı kırmızı (oyuncununki yeşil kalır).
+            var bar = go.AddComponent<HealthBar>();
+            SerializedSet(bar, "fillColor", new Color(0.9f, 0.15f, 0.15f));
+            SerializedSet(bar, "lowColor", new Color(0.45f, 0.05f, 0.05f));
 
             return go;
         }
@@ -1518,7 +1586,7 @@ namespace Ulak.EditorTools
 
             var pc = go.AddComponent<PlayerController>();
             SerializedSet(pc, "groundCheck", feet.transform);
-            SerializedSet(pc, "groundLayer", (LayerMask)(1 << GroundLayer));
+            SerializedSet(pc, "groundLayer", (LayerMask)((1 << GroundLayer) | (1 << EnemyLayer))); // düşman kafası da zemin
 
             var atk = go.AddComponent<SwordAttack>();
             SerializedSet(atk, "targetLayers", (LayerMask)(1 << EnemyLayer));

@@ -29,11 +29,16 @@ namespace Ulak.Gameplay
         [Tooltip("Mermi görseli (boşsa kendi sprite'ı küçültülerek kullanılır).")]
         [SerializeField] private Sprite projectileSprite;
 
+        [Header("Görünüm")]
+        [Tooltip("Sprite varsayılan olarak sağa mı bakıyor? (Kartal görseli SOLA bakar.)")]
+        [SerializeField] private bool spriteFacesRight = true;
+
         [SerializeField] private string playerTag = "Player";
 
         private Rigidbody2D _rb;
         private Health _health;
         private Knockback _knockback;
+        private SpriteRenderer _sr;
         private Transform _player;
         private float _baseY;
         private float _nextFireTime;
@@ -43,6 +48,7 @@ namespace Ulak.Gameplay
             _rb = GetComponent<Rigidbody2D>();
             _health = GetComponent<Health>();
             _knockback = GetComponent<Knockback>();
+            _sr = GetComponent<SpriteRenderer>();
             _rb.gravityScale = 0f; // uçan birim
             _baseY = transform.position.y;
         }
@@ -64,11 +70,13 @@ namespace Ulak.Gameplay
             float vy = (desiredY - transform.position.y) * 4f;
 
             float vx = 0f;
+            bool playerInRange = false;
             if (_player != null)
             {
                 float dx = _player.position.x - transform.position.x;
                 if (Mathf.Abs(dx) <= aggroRange)
                 {
+                    playerInRange = true;
                     // Tercih edilen mesafeyi koru: hangi taraftaysa o tarafta kal.
                     float side = transform.position.x >= _player.position.x ? 1f : -1f;
                     float desiredX = _player.position.x + side * preferredRange;
@@ -77,6 +85,12 @@ namespace Ulak.Gameplay
             }
 
             _rb.linearVelocity = new Vector2(vx, vy);
+
+            // Kartal her zaman tetikte: oyuncu varsa yüzü hep ona dönük.
+            if (_player != null)
+                Face(_player.position.x - transform.position.x);
+            else if (Mathf.Abs(vx) > 0.01f)
+                Face(vx);
         }
 
         private void Update()
@@ -98,7 +112,7 @@ namespace Ulak.Gameplay
 
             var sr = go.AddComponent<SpriteRenderer>();
             sr.sprite = projectileSprite != null ? projectileSprite : GetComponent<SpriteRenderer>().sprite;
-            sr.color = new Color(0.9f, 0.8f, 0.3f);
+            sr.color = Color.white; // mermi sprite'ı kendi rengini taşır (kırmızı top)
             sr.sortingOrder = 11;
 
             Vector2 dir = ((Vector2)_player.position + Vector2.up * 0.3f
@@ -106,6 +120,13 @@ namespace Ulak.Gameplay
 
             var proj = go.AddComponent<EnemyProjectile>();
             proj.Init(dir, projectileSpeed, projectileDamage);
+        }
+
+        /// <summary>Sprite'ı verilen yatay yöne çevirir.</summary>
+        private void Face(float dirX)
+        {
+            if (_sr == null || Mathf.Approximately(dirX, 0f)) return;
+            _sr.flipX = spriteFacesRight ? dirX < 0f : dirX > 0f;
         }
     }
 }
