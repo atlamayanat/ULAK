@@ -8,6 +8,7 @@ public class BossController : MonoBehaviour, IDamageable
     [Header("Hedef ve Fizik")]
     public Transform player;
     private Rigidbody2D rb;
+    private Collider2D bossCollider;
     public float jumpForce = 12f;
     public LayerMask groundLayer;
 
@@ -26,12 +27,15 @@ public class BossController : MonoBehaviour, IDamageable
     private bool isPhase2 = false;
     private bool isResettingToCenter = false;
 
-    [Header("Saldırı ve Hasar Ayarları")]
+    [Header("Saldırı ve Hasar")]
     public float meleeRange = 2.5f;
     public float attackCooldown = 2f;
     private float nextAttackTime = 0f;
     public int meleeDamage = 20;
     public int contactDamage = 10;
+
+    [Tooltip("Boss kaç saniye yakın vuruş yapamazsa olduğu yere çakılıp uzaktan sıkmaya başlar?")]
+    public float antiKiteSuresi = 5f; // YENİ: Inspector'dan ayarlanabilir süre
 
     public GameObject rangedProjectilePrefab;
     public GameObject meleeVisualPrefab;
@@ -41,15 +45,18 @@ public class BossController : MonoBehaviour, IDamageable
     private Color originalColor;
     private Vector3 originalScale;
 
-    // --- YENİ YAPAY ZEKA DEĞİŞKENLERİ ---
-    private float ceilingEscapeDir = 0f; // Tavandan kaçış yönü kilidi
-    public float tavanKontrolMesafesi = 3.5f; // Yukarı doğru atılacak lazerin boyu
+    // --- DURUM (STATE) DEĞİŞKENLERİ ---
+    private bool isLeaping = false;
+    private bool isStunned = false;
+    private bool isAttacking = false;
+    private float lastMeleeTime = 0f;
 
     public bool IsAlive => currentHealth > 0;
 
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        bossCollider = GetComponent<Collider2D>();
         currentHealth = maxHealth;
         currentMoveSpeed = baseMoveSpeed;
         defaultPosition = transform.position;
@@ -58,6 +65,7 @@ public class BossController : MonoBehaviour, IDamageable
         if (sr != null) originalColor = sr.color;
 
         originalScale = transform.localScale;
+        lastMeleeTime = Time.time;
 
         if (healthBarParent != null)
             StartCoroutine(BarIntroAnimation());
@@ -65,7 +73,7 @@ public class BossController : MonoBehaviour, IDamageable
 
     void Update()
     {
-        if (player == null || isResettingToCenter || !IsAlive) return;
+        if (player == null || isResettingToCenter || !IsAlive || isLeaping || isStunned || isAttacking) return;
 
         if (currentHealth <= maxHealth * 0.5f && !isPhase2)
         {
@@ -75,109 +83,147 @@ public class BossController : MonoBehaviour, IDamageable
 
         float distX = player.position.x - transform.position.x;
         float distY = player.position.y - transform.position.y;
-
-        // Çevre Kontrolleri (Lazerler)
         bool isGrounded = Physics2D.Raycast(transform.position, Vector2.down, 1.5f, groundLayer);
 
         Vector2 bakisYonu = new Vector2(Mathf.Sign(transform.localScale.x), 0);
         bool duvaraCarpti = Physics2D.Raycast(transform.position, bakisYonu, 1.2f, groundLayer);
 
-        // YENİ LAZER: Tam kafasının üstünde engelleyici bir platform/tavan var mı?
-        bool kafaUstuTavanVar = Physics2D.Raycast(transform.position, Vector2.up, tavanKontrolMesafesi, groundLayer);
+        // YENİ: Belirlediğin süre aşıldı mı?
+        bool antiKiteAktif = (Time.time - lastMeleeTime > antiKiteSuresi);
 
+        // --- SALDIRI KARAR MEKANİZMASI ---
+        if (Time.time >= nextAttackTime && isGrounded)
+        {
+            float distanceToPlayer = Vector2.Distance(transform.position, player.position);
+            bool ayniKatta = Mathf.Abs(distY) < 2.5f;
+
+            // 1. Yakın vurabiliyorsa vur (Sayacı Sıfırlar)
+            if (ayniKatta && distanceToPlayer <= meleeRange && !duvaraCarpti)
+            {
+                StartCoroutine(SaldiriAnimasyonu(true));
+                return;
+            }
+            // 2. Anti-Kite Aktifse VEYA normal uzak saldırı pozisyonundaysa uzaktan sık
+            else if (antiKiteAktif || (ayniKatta && !duvaraCarpti))
+            {
+                StartCoroutine(SaldiriAnimasyonu(false));
+                return;
+            }
+        }
+
+        // --- HAREKET SİSTEMİ ---
         float dirX = 0f;
 
-        // Havada donma kontrolü
-        if (!isGrounded)
+        // TARET MODU: Eğer Kite süresi dolduysa yürümeyi tamamen kes, olduğu yerde kalıp sana dönsün
+        if (antiKiteAktif && isGrounded)
         {
-            dirX = Mathf.Sign(rb.linearVelocity.x);
-            if (Mathf.Abs(rb.linearVelocity.x) < 0.1f) dirX = Mathf.Sign(distX);
+            dirX = 0f;
+            float yon = Mathf.Sign(distX);
+            if (yon != 0)
+                transform.localScale = new Vector3(yon * originalScale.x, originalScale.y, originalScale.z);
         }
-        // 1. DURUM: OYUNCU ÜST KATTA VE BOSS TAVANIN ALTINDA (Gelişmiş Çıkış Arama)
-        else if (distY > 1.5f && kafaUstuTavanVar)
+        else
         {
-            // Eğer henüz bir kaçış yönü seçmediyse, en mantıklı yönü kilitle
-            if (ceilingEscapeDir == 0f)
+            // NORMAL KOVALAMA
+            if (distY < -1.5f)
             {
-                // Oyuncu ne taraftaysa o taraftaki çıkışa doğru gitmeyi dene
-                if (Mathf.Abs(distX) > 0.5f)
-                    ceilingEscapeDir = Mathf.Sign(distX);
+                if (Mathf.Abs(distX) < 1.5f)
+                    dirX = Mathf.Sign(transform.localScale.x);
                 else
-                    ceilingEscapeDir = (rb.linearVelocity.x >= 0) ? 1f : -1f; // Tam altındaysa mevcut yönünü koru
-            }
-
-            // Çıkış yolunda haritanın dış duvarına çarparsa körü körüne duvara yürüme, yönü tersine çevir!
-            if (duvaraCarpti)
-            {
-                ceilingEscapeDir = -ceilingEscapeDir;
-            }
-
-            dirX = ceilingEscapeDir;
-        }
-        // 2. DURUM: OYUNCU ÜST KATTA AMA BOSS BOŞLUKTA (Tavan bitti, direkt zıpla!)
-        else if (distY > 1.5f && !kafaUstuTavanVar)
-        {
-            ceilingEscapeDir = 0f; // Kaçış kilidini sıfırla
-            dirX = Mathf.Sign(distX); // Oyuncuya yönel
-
-            if (isGrounded)
-            {
-                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce); // Yukarı fırla!
-            }
-        }
-        // 3. DURUM: OYUNCU ALT KATTA (Aşağı düşme zekası)
-        else if (distY < -1.5f)
-        {
-            ceilingEscapeDir = 0f;
-            if (Mathf.Abs(distX) < 1.2f)
-            {
-                dirX = (Mathf.Abs(rb.linearVelocity.x) < 0.1f) ? 1f : Mathf.Sign(rb.linearVelocity.x);
+                    dirX = Mathf.Sign(distX);
             }
             else
             {
-                dirX = Mathf.Sign(distX);
+                if (Mathf.Abs(distX) > 0.2f)
+                    dirX = Mathf.Sign(distX);
             }
-        }
-        // 4. DURUM: AYNI KATTALAR (Standart Takip)
-        else
-        {
-            ceilingEscapeDir = 0f;
-            if (Mathf.Abs(distX) > 0.2f)
-            {
-                dirX = Mathf.Sign(distX);
-            }
-        }
 
-        // Genel Duvar Aşma (Aynı kattayken bir kutuya/engele çarparsa zıplaması için)
-        if (isGrounded && duvaraCarpti && !kafaUstuTavanVar)
-        {
-            rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+            if (isGrounded && duvaraCarpti && distY < 2f)
+            {
+                rb.linearVelocity = new Vector2(rb.linearVelocity.x, jumpForce);
+            }
         }
 
         // Hareketi Uygula
         rb.linearVelocity = new Vector2(dirX * currentMoveSpeed, rb.linearVelocity.y);
 
-        // Yön Aynalama
-        if (dirX != 0)
+        if (dirX != 0 && !antiKiteAktif)
         {
             float yeniYönX = Mathf.Sign(dirX) * originalScale.x;
             transform.localScale = new Vector3(yeniYönX, originalScale.y, originalScale.z);
         }
+    }
 
-        // SALDIRI KONTROLÜ
-        if (Time.time >= nextAttackTime)
+    IEnumerator SaldiriAnimasyonu(bool isMelee)
+    {
+        isAttacking = true;
+
+        rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
+
+        float dirX = Mathf.Sign(player.position.x - transform.position.x);
+        if (dirX != 0)
         {
-            float distanceToPlayer = Vector2.Distance(transform.position, player.position);
+            transform.localScale = new Vector3(dirX * originalScale.x, originalScale.y, originalScale.z);
+        }
 
-            if (Mathf.Abs(distY) < 2.2f && !duvaraCarpti)
+        yield return new WaitForSeconds(0.2f);
+
+        if (isMelee)
+        {
+            MeleeAttack();
+            lastMeleeTime = Time.time; // Yakın vuruş yaptı! Anti-Kite Taret modundan çıkıp tekrar kovalamaya başlar
+        }
+        else
+        {
+            RangedAttack();
+        }
+
+        yield return new WaitForSeconds(0.5f);
+
+        isAttacking = false;
+    }
+
+    private void OnTriggerStay2D(Collider2D collision)
+    {
+        if (isLeaping || player == null || isStunned || isAttacking) return;
+
+        BossZiplamaNoktasi ziplamaNoktasi = collision.GetComponent<BossZiplamaNoktasi>();
+        if (ziplamaNoktasi != null)
+        {
+            if (player.position.y > transform.position.y + 1.5f)
             {
-                rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
-
-                if (distanceToPlayer <= meleeRange)
-                    MeleeAttack();
-                else
-                    RangedAttack();
+                StartCoroutine(ScriptedLeap(ziplamaNoktasi.hedefUstNokta.position));
             }
+        }
+    }
+
+    IEnumerator ScriptedLeap(Vector3 endPos)
+    {
+        isLeaping = true;
+        rb.linearVelocity = Vector2.zero;
+        rb.bodyType = RigidbodyType2D.Kinematic;
+
+        if (bossCollider != null) bossCollider.enabled = false;
+
+        Vector3 startPos = transform.position;
+        float duration = 0.4f;
+        float timer = 0f;
+
+        while (timer < duration)
+        {
+            timer += Time.deltaTime;
+            float t = timer / duration;
+            transform.position = Vector3.Lerp(startPos, endPos, t);
+            yield return null;
+        }
+
+        if (bossCollider != null) bossCollider.enabled = true;
+        rb.bodyType = RigidbodyType2D.Dynamic;
+        isLeaping = false;
+
+        if (Vector2.Distance(transform.position, player.position) <= meleeRange)
+        {
+            StartCoroutine(SaldiriAnimasyonu(true));
         }
     }
 
@@ -212,7 +258,7 @@ public class BossController : MonoBehaviour, IDamageable
 
     void OnCollisionStay2D(Collision2D collision)
     {
-        if (collision.gameObject.CompareTag("Player") && !isResettingToCenter && IsAlive)
+        if (collision.gameObject.CompareTag("Player") && !isResettingToCenter && IsAlive && !isLeaping)
         {
             var dmg = collision.gameObject.GetComponent<IDamageable>();
             if (dmg != null)
@@ -244,12 +290,20 @@ public class BossController : MonoBehaviour, IDamageable
         if (healthBarFill != null)
             healthBarFill.rectTransform.localScale = new Vector3(currentHealth / maxHealth, 1, 1);
 
-        StartCoroutine(DamageEffect(knockback));
-
         if (currentHealth <= 0)
         {
             if (healthBarParent != null) Destroy(healthBarParent);
             Destroy(gameObject);
+            return;
+        }
+
+        if (!isAttacking && !isLeaping)
+        {
+            StartCoroutine(DamageEffect(knockback));
+        }
+        else
+        {
+            StartCoroutine(SadeceRenkDegistir());
         }
     }
 
@@ -267,8 +321,20 @@ public class BossController : MonoBehaviour, IDamageable
 
     IEnumerator DamageEffect(Vector2 knockback)
     {
+        isStunned = true;
+
         if (sr != null) sr.color = Color.white;
         rb.linearVelocity = new Vector2(knockback.x, rb.linearVelocity.y);
+
+        yield return new WaitForSeconds(0.2f);
+
+        if (sr != null) sr.color = originalColor;
+        isStunned = false;
+    }
+
+    IEnumerator SadeceRenkDegistir()
+    {
+        if (sr != null) sr.color = Color.white;
         yield return new WaitForSeconds(0.1f);
         if (sr != null) sr.color = originalColor;
     }
@@ -301,9 +367,5 @@ public class BossController : MonoBehaviour, IDamageable
             Gizmos.color = new Color(1, 0, 0, 0.4f);
             Gizmos.DrawWireSphere(firePoint.position, meleeRange * 0.8f);
         }
-
-        // Editor'de tavan kontrol çizgisini mavi görmek için
-        Gizmos.color = Color.blue;
-        Gizmos.DrawLine(transform.position, transform.position + Vector3.up * tavanKontrolMesafesi);
     }
 }
