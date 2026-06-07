@@ -52,7 +52,7 @@ TextureImporter:
   maxTextureSize: 2048
   textureSettings:
     serializedVersion: 2
-    filterMode: 1
+    filterMode: 0
     aniso: 1
     mipBias: 0
     wrapU: 1
@@ -66,7 +66,7 @@ TextureImporter:
   spriteMeshType: 1
   alignment: 0
   spritePivot: {x: 0.5, y: 0.5}
-  spritePixelsToUnits: 100
+  spritePixelsToUnits: 32
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
@@ -90,7 +90,7 @@ TextureImporter:
     maxTextureSize: 2048
     resizeAlgorithm: 0
     textureFormat: -1
-    textureCompression: 1
+    textureCompression: 0
     compressionQuality: 50
     crunchedCompression: 0
     allowsAlphaSplitting: 0
@@ -128,133 +128,111 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: mavi ates_0
+      name: mavi_ates_0
       rect:
         serializedVersion: 2
-        x: 8
-        y: 6
-        width: 16
-        height: 21
+        x: 0
+        y: 0
+        width: 32
+        height: 32
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: d60f9d580aaca0e80800000000000000
-      internalID: -8211528179767447443
+      spriteID: a6974e4ecf742084da20fbaf5d894fe3
+      internalID: 1636730618
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mavi ates_1
+      name: mavi_ates_1
       rect:
         serializedVersion: 2
-        x: 40
-        y: 5
-        width: 15
-        height: 19
+        x: 32
+        y: 0
+        width: 32
+        height: 32
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: a7d4edbbeeb8145b0800000000000000
-      internalID: -5385869821888017030
+      spriteID: 4b09f931019cd0d4ca73f479c3f4aa5c
+      internalID: -2110577068
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mavi ates_2
+      name: mavi_ates_2
       rect:
         serializedVersion: 2
-        x: 45
-        y: 17
-        width: 10
-        height: 11
+        x: 64
+        y: 0
+        width: 32
+        height: 32
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 7b844b9b4ea5b5ca0800000000000000
-      internalID: -6027123737890633545
+      spriteID: 0d6d554d7ef0188458efafc03b3cf78c
+      internalID: 922055941
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mavi ates_3
+      name: mavi_ates_3
       rect:
         serializedVersion: 2
-        x: 72
-        y: 4
-        width: 15
-        height: 21
+        x: 96
+        y: 0
+        width: 32
+        height: 32
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 268bd3e27bd283300800000000000000
-      internalID: 231985645587642466
+      spriteID: efd2e5cf824bae64d926cd34925ee599
+      internalID: 1953876550
       vertices: []
       indices: 
       edges: []
       weights: []
     - serializedVersion: 2
-      name: mavi ates_4
+      name: mavi_ates_4
       rect:
         serializedVersion: 2
-        x: 105
-        y: 4
-        width: 13
-        height: 22
+        x: 128
+        y: 0
+        width: 32
+        height: 32
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       customData: 
       outline: []
       physicsShape: []
-      tessellationDetail: -1
+      tessellationDetail: 0
       bones: []
-      spriteID: 1def675a13239a3c0800000000000000
-      internalID: -4347888776438677807
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
-    - serializedVersion: 2
-      name: mavi ates_5
-      rect:
-        serializedVersion: 2
-        x: 137
-        y: 5
-        width: 14
-        height: 21
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: dc7af4b76ec507f60800000000000000
-      internalID: 8030020280582645709
+      spriteID: 84809086de2a88d48be1688cc8624e45
+      internalID: 51240553
       vertices: []
       indices: 
       edges: []
@@ -263,7 +241,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 
+    spriteID: 0806f45642c606043a040240adc1e816
     internalID: 0
     vertices: []
     indices: 
@@ -273,12 +251,11 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      mavi ates_0: -8211528179767447443
-      mavi ates_1: -5385869821888017030
-      mavi ates_2: -6027123737890633545
-      mavi ates_3: 231985645587642466
-      mavi ates_4: -4347888776438677807
-      mavi ates_5: 8030020280582645709
+      mavi_ates_0: 1636730618
+      mavi_ates_1: -2110577068
+      mavi_ates_2: 922055941
+      mavi_ates_3: 1953876550
+      mavi_ates_4: 51240553
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

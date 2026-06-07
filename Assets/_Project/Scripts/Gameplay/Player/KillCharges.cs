@@ -5,21 +5,26 @@ using Ulak.Core;
 namespace Ulak.Gameplay
 {
     /// <summary>
-    /// Can basma mekaniği (greybox v1):
-    ///  - Her canavar kesiminde 1 yük kazanılır (bkz. EnemyDeath → Add).
-    ///  - Yükler sol üst köşedeki sayaçta gösterilir.
-    ///  - 3 yüke ulaşınca H tuşu canı tamamen yeniler ve yükleri harcar.
+    /// Can basma mekaniği (greybox v3):
+    ///  - Canavar kesiminde VE boss'a vuruşta 1 yük kazanılır
+    ///    (bkz. EnemyDeath → Add, BossController.TakeDamage → Add).
+    ///  - Yükler sol üst köşedeki sayaçta gösterilir (en çok 10).
+    ///  - H tuşu MEVCUT TÜM yükleri tüketir; yük başına canın %10'u dolar
+    ///    (örn. 3 yük → %30). 10 sn bekleme süresi var.
     /// UI, greybox sadeliği için OnGUI ile çizilir — Canvas gerekmez.
     /// </summary>
     [RequireComponent(typeof(Health))]
     public class KillCharges : MonoBehaviour
     {
         [Tooltip("Biriktirilebilecek en fazla yük.")]
-        [SerializeField] private int maxCharges = 3;
-        [Tooltip("Bir can yenilemenin yük bedeli.")]
-        [SerializeField] private int healCost = 3;
+        [SerializeField] private int maxCharges = 10;
+        [Tooltip("Harcanan yük başına dolan can oranı (0.10 = %10).")]
+        [SerializeField] private float healYuzdesi = 0.10f;
+        [Tooltip("İki H basışı arasındaki bekleme süresi (sn).")]
+        [SerializeField] private float healBeklemesi = 10f;
 
         private Health _health;
+        private float _sonrakiHeal;
         private GUIStyle _counterStyle;
         private GUIStyle _hintStyle;
 
@@ -46,10 +51,14 @@ namespace Ulak.Gameplay
 
         private void TryHeal()
         {
-            if (Current < healCost) return;                 // yeterli yük yok
+            if (Time.time < _sonrakiHeal) return;           // bekleme süresi dolmadı
+            if (Current <= 0) return;                       // hiç yük yok
             if (_health.Current >= _health.Max) return;     // can zaten dolu, harcama
-            Current -= healCost;
-            _health.ResetHealth();
+            int harcanan = Current;
+            Current = 0;                                    // TÜM yükler tüketilir
+            int miktar = Mathf.Max(1, Mathf.RoundToInt(_health.Max * healYuzdesi * harcanan));
+            _health.Heal(miktar);
+            _sonrakiHeal = Time.time + healBeklemesi;
         }
 
         private void OnGUI()
@@ -79,10 +88,14 @@ namespace Ulak.Gameplay
             _counterStyle.normal.textColor = old;
             GUI.Label(pos, text, _counterStyle);
 
-            // Yük hazırsa ipucu göster
-            if (Current >= healCost && _health.Current < _health.Max)
+            // İpucu: beklemede kalan süre ya da kullanım çağrısı
+            float kalan = _sonrakiHeal - Time.time;
+            if (kalan > 0f)
                 GUI.Label(new Rect(18, pos.y + pos.height + 2, 360, 30),
-                    "H → Can yenile", _hintStyle);
+                    $"H beklemede: {Mathf.CeilToInt(kalan)} sn", _hintStyle);
+            else if (Current > 0 && _health.Current < _health.Max)
+                GUI.Label(new Rect(18, pos.y + pos.height + 2, 360, 30),
+                    $"H → %{Mathf.RoundToInt(healYuzdesi * 100f * Current)} can ({Current} yük)", _hintStyle);
         }
     }
 }
