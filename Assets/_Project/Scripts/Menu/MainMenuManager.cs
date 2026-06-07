@@ -3,29 +3,30 @@ using UnityEngine.SceneManagement;
 
 public class MainMenuManager : MonoBehaviour
 {
-    // Oyunundaki tüm sahneleri buraya Enum olarak tanýmlýyoruz.
-    // Ýsimlerin, Unity'deki sahne isimleriyle birebir ayný olmasý gerekir.
+    // Oyunundaki tï¿½m sahneleri buraya Enum olarak tanï¿½mlï¿½yoruz.
+    // ï¿½simlerin, Unity'deki sahne isimleriyle birebir aynï¿½ olmasï¿½ gerekir.
     public enum SceneList
     {
         MainMenu,
         GameScene,
         CreditsMenu,
-        UmayKoy
+        UmayKoy,
+        BaslangicIntro
     }
 
-    [Header("Sahne Ayarlarý")]
-    [Tooltip("Butona basýldýðýnda hangi sahneye gidilecek?")]
+    [Header("Sahne Ayarlarï¿½")]
+    [Tooltip("Butona basï¿½ldï¿½ï¿½ï¿½nda hangi sahneye gidilecek?")]
     public SceneList targetScene;
 
     public void PlayGame()
     {
-        // Seçilen Enum deðerini otomatik olarak String'e çevirip sahneyi yüklüyoruz
+        // Seï¿½ilen Enum deï¿½erini otomatik olarak String'e ï¿½evirip sahneyi yï¿½klï¿½yoruz
         SceneManager.LoadScene(targetScene.ToString());
     }
 
     public void QuitGame()
     {
-        Debug.Log("Oyun kapatýlýyor...");
+        Debug.Log("Oyun kapatï¿½lï¿½yor...");
         Application.Quit();
     }
 }

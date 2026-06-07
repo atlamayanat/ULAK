@@ -59,10 +59,20 @@ namespace Ulak.Core
 
         private void SahneYuklendi(Scene s, LoadSceneMode m) => SahneKontrol(s.name);
 
+        /// <summary>
+        /// Müziğin temposunu (pitch) ayarlar — at hızı gibi oyun durumlarına
+        /// bağlamak için. Sahne değişiminde otomatik 1'e döner.
+        /// </summary>
+        public void TempoAyarla(float pitch)
+        {
+            if (_src != null) _src.pitch = pitch;
+        }
+
         private void SahneKontrol(string sahneAdi)
         {
             bool calmali = System.Array.Exists(muzikSahneleri, x => x == sahneAdi);
             if (_fade != null) StopCoroutine(_fade);
+            if (_src != null) _src.pitch = 1f; // sahne değişti — tempo sıfırla
 
             if (calmali)
             {

@@ -56,6 +56,15 @@ public class BossController : MonoBehaviour, IDamageable
     public float buyuBeklemesi = 10f;
     private float sonrakiBuyu = 0f;
 
+    [Header("Dövüş Görselleri")]
+    [Tooltip("Nefes alma/yürüme döngüsü (2 kare).")]
+    public Sprite[] idleKareleri;
+    [Tooltip("Pençe savuruşu pozu (kırmızı tırnak izli).")]
+    public Sprite penceKaresi;
+    [Tooltip("Büyü atışı pozu (kol uzanmış).")]
+    public Sprite buyuKaresi;
+    private SpriteFlipbook book;
+
     [Header("Işınlanma")]
     [Tooltip("Sabit ışınlanma noktaları — oyuncuya en yakın olana ışınlanır.")]
     public Transform[] isinlanmaNoktalari;
@@ -92,6 +101,7 @@ public class BossController : MonoBehaviour, IDamageable
 
         sr = GetComponent<SpriteRenderer>();
         if (sr != null) originalColor = sr.color;
+        book = GetComponent<SpriteFlipbook>();
 
         // Can barı: Filled moduna al — çerçeve boyutu SABİT kalır,
         // yalnızca dolgu soldan boşalır (localScale küçültmesi bar
@@ -229,8 +239,24 @@ public class BossController : MonoBehaviour, IDamageable
 
         rb.linearVelocity = new Vector2(dirX * currentMoveSpeed, rb.linearVelocity.y);
 
+        if (book != null) book.SetMoving(Mathf.Abs(dirX) > 0.01f); // yürüme/nefes döngüsü
+
         if (dirX != 0 && !antiKiteAktif)
             YuzCevir(dirX);
+    }
+
+    /// <summary>Saldırı pozunu gösterir — flipbook'u durdurup kareyi basar.</summary>
+    void PozGoster(Sprite poz)
+    {
+        if (poz == null || sr == null) return;
+        if (book != null) book.enabled = false;
+        sr.sprite = poz;
+    }
+
+    /// <summary>Saldırı bitti — flipbook idle/yürüme döngüsüne geri döner.</summary>
+    void PozBirak()
+    {
+        if (book != null) book.enabled = true;
     }
 
     /// <summary>
@@ -258,6 +284,9 @@ public class BossController : MonoBehaviour, IDamageable
             YuzCevir(dirX, true); // vururken hedefe mutlaka dön
         }
 
+        // Saldırı pozu: pençede tırnak izli kare, büyüde kol uzatma karesi.
+        PozGoster(isMelee ? penceKaresi : buyuKaresi);
+
         yield return new WaitForSeconds(0.2f);
 
         if (isMelee) MeleeAttack();
@@ -265,6 +294,7 @@ public class BossController : MonoBehaviour, IDamageable
 
         lastCombatTime = Time.time;
         yield return new WaitForSeconds(0.5f);
+        PozBirak();
         isAttacking = false;
     }
 
@@ -372,6 +402,7 @@ public class BossController : MonoBehaviour, IDamageable
         rb.linearVelocity = Vector2.zero;
         rb.bodyType = RigidbodyType2D.Kinematic;
         if (bossCollider != null) bossCollider.enabled = false;
+        if (book != null) book.SetMoving(false); // fade sırasında sakin duruş
 
         // Maviye dönüp saydamlaş.
         yield return RenkGecisi(originalColor, isinlanmaRengi, 1f, 0f, isinlanmaFadeSuresi);

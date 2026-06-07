@@ -43,6 +43,10 @@ namespace Ulak.Gameplay
         [Tooltip("Videonun toplam oynatma süresi (sn). 0 = orijinal hız.")]
         public float videoSuresi = 0f;
 
+        [Header("Gulyabani'nin Sonu")]
+        [Tooltip("Videodan sonra boss'un yerini alan, gözü kapalı yerde yatış görseli.")]
+        public Sprite yatanGulyabani;
+
         private bool _basladi;
         private float _karartma; // 0..1 ekran karartma düzeyi
         private Transform _oyuncu;
@@ -147,8 +151,8 @@ namespace Ulak.Gameplay
             if (vp != null)
                 yield return VideoyuOynat(vp);
 
-            // --- 8) Boss yok olur; perde açılır, kurtlar geldikleri yoldan döner ---
-            if (boss != null) Destroy(boss.gameObject); // videoda sonu geldi
+            // --- 8) Gulyabani yere serilir; perde açılır, kurtlar geldikleri yoldan döner ---
+            if (boss != null) GulyabaniyiYatir(boss); // kurtlar tarafından yenilmiş
             yield return Perde(0f, 0.8f);
             yield return SuruGeriDoner();
 
@@ -167,6 +171,36 @@ namespace Ulak.Gameplay
 
             // --- 11) Son kararma ---
             yield return Perde(1f, 1.2f);
+        }
+
+        /// <summary>Boss'u gözü kapalı, yere serilmiş görseline çevirir.</summary>
+        private void GulyabaniyiYatir(BossController boss)
+        {
+            var sr = boss.GetComponent<SpriteRenderer>();
+            if (yatanGulyabani == null || sr == null)
+            {
+                Destroy(boss.gameObject); // görsel yoksa eski davranış: yok et
+                return;
+            }
+
+            // Flipbook kapatılmazsa yatan kareyi her karede idle ile ezer.
+            var fb = boss.GetComponent<SpriteFlipbook>();
+            if (fb != null) fb.enabled = false;
+
+            sr.sprite = yatanGulyabani;
+            sr.color = Color.white;
+            boss.transform.localScale = Vector3.one; // dövüşteki yön/ölçek kalıntısını sıfırla
+
+            // Cesedi zemine oturt (pivot merkez → yarı yükseklik kadar yukarı).
+            var poz = bossNoktasi != null ? bossNoktasi.position : boss.transform.position;
+            var zem = Physics2D.Raycast((Vector2)poz + Vector2.up * 2f, Vector2.down, 14f,
+                LayerMask.GetMask("Ground"));
+            float tabanY = zem.collider != null ? zem.point.y : poz.y - 1.7f;
+            boss.transform.position = new Vector3(
+                poz.x, tabanY + yatanGulyabani.bounds.extents.y + 0.02f, poz.z);
+
+            var col = boss.GetComponent<Collider2D>();
+            if (col != null) col.enabled = false; // ceset fiziksel engel olmasın
         }
 
         /// <summary>Siyah perdeyi hedef değere yumuşakça götürür (0 = açık, 1 = kapalı).</summary>
@@ -298,6 +332,10 @@ namespace Ulak.Gameplay
             if (rb != null) { rb.linearVelocity = Vector2.zero; rb.bodyType = RigidbodyType2D.Kinematic; }
             var sr = boss.GetComponent<SpriteRenderer>();
             if (sr != null) sr.color = Color.white; // yarım kalmış flash/fade temizliği
+
+            // Saldırı pozunda yakalandıysa idle nefes döngüsüne dön.
+            var fb = boss.GetComponent<SpriteFlipbook>();
+            if (fb != null) { fb.enabled = true; fb.SetMoving(false); }
         }
 
         private Vector3 ZemineOturt(Vector3 nokta, float pivotYuksekligi)
