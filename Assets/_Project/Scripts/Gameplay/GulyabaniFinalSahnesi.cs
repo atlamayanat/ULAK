@@ -47,8 +47,18 @@ namespace Ulak.Gameplay
         [Tooltip("Videodan sonra boss'un yerini alan, gözü kapalı yerde yatış görseli.")]
         public Sprite yatanGulyabani;
 
+        [Header("Kapanış Sinematiği")]
+        [Tooltip("Oyuncu sahneden çıkıp ekran karardıktan sonra tam ekran oynar (finalimizss.mp4).")]
+        public UnityEngine.Video.VideoClip kapanisVideosu;
+        [Tooltip("Kapanış sinematiği boyunca arkada çalan davul sesi (davul.mp3).")]
+        public AudioClip davulSesi;
+        [Tooltip("Sinematik bitince gösterilecek jenerik görseli (jenerik.png).")]
+        public Sprite jenerikGorseli;
+
         private bool _basladi;
         private float _karartma; // 0..1 ekran karartma düzeyi
+        private bool _jenerikGoster;
+        private AudioSource _davul;
         private Transform _oyuncu;
         private readonly List<GameObject> _suru = new List<GameObject>(); // büyük kurtlar
 
@@ -72,7 +82,7 @@ namespace Ulak.Gameplay
 
             // Videoyu ŞİMDİDEN arka planda yüklemeye başla — kararma anında
             // hazır olur, siyah ekranda bekleme ("yükleme ekranı") kalmaz.
-            var vp = finalVideo != null ? VideoyuHazirla() : null;
+            var vp = VideoyuHazirla(finalVideo);
 
             // Havadaki mavi ateş toplarını söndür.
             foreach (var top in FindObjectsByType<MaviAtesTopu>(FindObjectsSortMode.None))
@@ -149,7 +159,7 @@ namespace Ulak.Gameplay
 
             // --- 7) Final videosu (müzik çalmaya devam eder) ---
             if (vp != null)
-                yield return VideoyuOynat(vp);
+                yield return VideoyuOynat(vp, videoSuresi);
 
             // --- 8) Gulyabani yere serilir; perde açılır, kurtlar geldikleri yoldan döner ---
             if (boss != null) GulyabaniyiYatir(boss); // kurtlar tarafından yenilmiş
@@ -167,10 +177,43 @@ namespace Ulak.Gameplay
             yield return new WaitForSeconds(0.3f);
 
             // --- 10) Oyuncu kurtların peşinden koşup sahneden çıkar ---
+            // (kapanış sinematiği bu sırada arka planda hazırlanır)
+            var kapanisVp = VideoyuHazirla(kapanisVideosu);
             yield return OyuncuCikisi();
 
             // --- 11) Son kararma ---
             yield return Perde(1f, 1.2f);
+
+            // --- 12) Kapanış sinematiği: tam ekran + davul eşliğinde ---
+            if (kapanisVp != null)
+            {
+                if (davulSesi != null)
+                {
+                    _davul = gameObject.AddComponent<AudioSource>();
+                    _davul.clip = davulSesi;
+                    _davul.loop = true;
+                    _davul.playOnAwake = false;
+                    _davul.Play();
+                }
+                yield return VideoyuOynat(kapanisVp, 0f);
+                if (_davul != null) yield return DavulSondur(0.7f);
+            }
+
+            // --- 13) Jenerik: sinematikten hemen sonra ---
+            if (jenerikGorseli != null)
+                _jenerikGoster = true; // OnGUI siyah perdenin üstüne çizer
+        }
+
+        private IEnumerator DavulSondur(float sure)
+        {
+            float bas = _davul.volume, t = 0f;
+            while (t < sure)
+            {
+                t += Time.deltaTime;
+                _davul.volume = Mathf.Lerp(bas, 0f, t / sure);
+                yield return null;
+            }
+            _davul.Stop();
         }
 
         /// <summary>Boss'u gözü kapalı, yere serilmiş görseline çevirir.</summary>
@@ -268,14 +311,14 @@ namespace Ulak.Gameplay
         }
 
         /// <summary>VideoPlayer'ı kurar ve arka planda yüklemeye başlar.</summary>
-        private UnityEngine.Video.VideoPlayer VideoyuHazirla()
+        private UnityEngine.Video.VideoPlayer VideoyuHazirla(UnityEngine.Video.VideoClip k)
         {
             var cam = Camera.main;
-            if (cam == null) return null;
+            if (cam == null || k == null) return null;
 
             var vp = cam.gameObject.AddComponent<UnityEngine.Video.VideoPlayer>();
             vp.playOnAwake = false;
-            vp.clip = finalVideo;
+            vp.clip = k;
             vp.renderMode = UnityEngine.Video.VideoRenderMode.CameraNearPlane;
             vp.aspectRatio = UnityEngine.Video.VideoAspectRatio.FitOutside;   // TAM EKRAN
             vp.audioOutputMode = UnityEngine.Video.VideoAudioOutputMode.None; // müzik sürsün
@@ -285,14 +328,14 @@ namespace Ulak.Gameplay
             return vp;
         }
 
-        private IEnumerator VideoyuOynat(UnityEngine.Video.VideoPlayer vp)
+        private IEnumerator VideoyuOynat(UnityEngine.Video.VideoPlayer vp, float istenenSure)
         {
-            // Genelde çoktan hazır — kurt koşusu boyunca yüklendi.
+            // Genelde çoktan hazır — önceki sahne adımları boyunca yüklendi.
             while (!vp.isPrepared) yield return null;
 
-            // Klibi istenen süreye yay (örn. 1.04 sn klip → 3.5 sn ≈ 0.3x).
-            if (videoSuresi > 0.05f && finalVideo.length > 0.01)
-                vp.playbackSpeed = (float)(finalVideo.length / videoSuresi);
+            // Klibi istenen süreye yay (0 = orijinal hız).
+            if (istenenSure > 0.05f && vp.clip != null && vp.clip.length > 0.01)
+                vp.playbackSpeed = (float)(vp.clip.length / istenenSure);
 
             // İlk kareyi getirip DURDUR — perde ilk karenin üstünden açılsın,
             // videonun başı perde arkasında kaybolmasın.
@@ -423,11 +466,23 @@ namespace Ulak.Gameplay
 
         private void OnGUI()
         {
-            if (_karartma <= 0f) return;
-            var eski = GUI.color;
-            GUI.color = new Color(0f, 0f, 0f, _karartma);
-            GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
-            GUI.color = eski;
+            if (_karartma > 0f)
+            {
+                var eski = GUI.color;
+                GUI.color = new Color(0f, 0f, 0f, _karartma);
+                GUI.DrawTexture(new Rect(0, 0, Screen.width, Screen.height), Texture2D.whiteTexture);
+                GUI.color = eski;
+            }
+
+            // Jenerik — siyah perdenin ÜSTÜNE, tam ekran (oran korunur).
+            if (_jenerikGoster && jenerikGorseli != null)
+            {
+                var tex = jenerikGorseli.texture;
+                float sw = Screen.width, sh = Screen.height;
+                float olcek = Mathf.Max(sw / tex.width, sh / tex.height);
+                float w = tex.width * olcek, h = tex.height * olcek;
+                GUI.DrawTexture(new Rect((sw - w) / 2f, (sh - h) / 2f, w, h), tex);
+            }
         }
     }
 }

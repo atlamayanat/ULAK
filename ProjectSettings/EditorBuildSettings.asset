@@ -5,34 +5,31 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
-  - enabled: 0
-    path: Assets/Scenes/SampleScene.unity
-    guid: 8c9cfa26abfee488c85f1582747f6a02
-  - enabled: 0
+  - enabled: 1
     path: Assets/Scenes/MainMenu.unity
     guid: 21b77259c0343b74fb79b5444920d29c
-  - enabled: 0
-    path: Assets/_Project/Scenes/AT-GUNDUZ.unity
-    guid: 4731ea70d7d66cb4caef3277c2903282
-  - enabled: 0
-    path: Assets/_Project/Scenes/GECE-SAVAS.unity
-    guid: 009392fe7be4b974299e79bef58aff50
-  - enabled: 0
+  - enabled: 1
+    path: Assets/Scenes/BaslangicIntro.unity
+    guid: 93a379c135f9d36428a37523bc375779
+  - enabled: 1
     path: Assets/_Project/Scenes/UmayKoy.unity
     guid: 422e4c919a89e5640871a0126ec20c1a
   - enabled: 1
-    path: Assets/Scenes/BossFightArea.unity
-    guid: fd7f965ba310a054f8ede2fb34f202c0
-  - enabled: 0
     path: Assets/_Project/Scenes/ulgen_koy.unity
     guid: fdfa10b32d8e1424a887d6c09b2c7f0c
-  - enabled: 0
-    path: Assets/Scenes/BaslangicIntro.unity
-    guid: 93a379c135f9d36428a37523bc375779
-  - enabled: 0
+  - enabled: 1
     path: Assets/_Project/Scenes/erlik_koy.unity
     guid: f235c538d6c23344dad3c58904a6543a
-  - enabled: 0
+  - enabled: 1
+    path: Assets/_Project/Scenes/AT-GUNDUZ.unity
+    guid: 4731ea70d7d66cb4caef3277c2903282
+  - enabled: 1
+    path: Assets/_Project/Scenes/GECE-SAVAS.unity
+    guid: 009392fe7be4b974299e79bef58aff50
+  - enabled: 1
+    path: Assets/Scenes/BossFightArea.unity
+    guid: fd7f965ba310a054f8ede2fb34f202c0
+  - enabled: 1
     path: Assets/Scenes/Credit.unity
     guid: cd960cce45c121646b6ba5266cb4443d
   m_configObjects:

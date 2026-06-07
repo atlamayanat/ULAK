@@ -443,6 +443,9 @@ MonoBehaviour:
   finalVideo: {fileID: 32900000, guid: 32bb54089c2ceb641a448ed570916465, type: 3}
   videoSuresi: 0
   yatanGulyabani: {fileID: 21300000, guid: 05ead994270a2d140944fb07abb62d6d, type: 3}
+  kapanisVideosu: {fileID: 32900000, guid: d998fe5843f7f1445a15b84a79384255, type: 3}
+  davulSesi: {fileID: 8300000, guid: 5c89135adbf692c4c8c9b1e12d7011fa, type: 3}
+  jenerikGorseli: {fileID: 21300000, guid: f22b9663c8e778f4cae7f973436ead45, type: 3}
 --- !u!4 &30982836
 Transform:
   m_ObjectHideFlags: 0

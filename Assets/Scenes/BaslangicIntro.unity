@@ -240,7 +240,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb7d55da9b6b1ca41beb352dd9e7c71c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ulak.Core.IntroVideoOynatici
+  bilgiGorseli: {fileID: 21300000, guid: 75aa8e48eb1478045a64d70455a10c14, type: 3}
+  bilgiSesi: {fileID: 8300000, guid: 1ee26a28ebe4b694795b51316ab1c81a, type: 3}
+  bilgiVarsayilanSure: 6
   klip: {fileID: 32900000, guid: a61751b580d20b244b54772afc21cc7c, type: 3}
+  davulSesi: {fileID: 8300000, guid: 5c89135adbf692c4c8c9b1e12d7011fa, type: 3}
   sonrakiSahne: UmayKoy
   atlanabilir: 1
 --- !u!4 &1470531481
