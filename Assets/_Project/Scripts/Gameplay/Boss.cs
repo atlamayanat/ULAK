@@ -67,6 +67,18 @@ public class BossController : MonoBehaviour, IDamageable
         sr = GetComponent<SpriteRenderer>();
         if (sr != null) originalColor = sr.color;
 
+        // Can barı: Filled moduna al — çerçeve boyutu SABİT kalır,
+        // yalnızca dolgu soldan boşalır (localScale küçültmesi bar
+        // boyutunu bozuyordu).
+        if (healthBarFill != null)
+        {
+            healthBarFill.type = Image.Type.Filled;
+            healthBarFill.fillMethod = Image.FillMethod.Horizontal;
+            healthBarFill.fillOrigin = (int)Image.OriginHorizontal.Left;
+            healthBarFill.fillAmount = 1f;
+            healthBarFill.rectTransform.localScale = Vector3.one; // eski ölçek kalıntısını sıfırla
+        }
+
         originalScale = transform.localScale;
         lastCombatTime = Time.time;
 
@@ -320,7 +332,7 @@ public class BossController : MonoBehaviour, IDamageable
         lastCombatTime = Time.time;
 
         if (healthBarFill != null)
-            healthBarFill.rectTransform.localScale = new Vector3(currentHealth / maxHealth, 1, 1);
+            healthBarFill.fillAmount = Mathf.Clamp01(currentHealth / maxHealth); // boyut sabit, dolgu boşalır
 
         if (currentHealth <= 0)
         {

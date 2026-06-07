@@ -1086,6 +1086,83 @@ namespace Ulak.EditorTools
             go.AddComponent<TiledBoxSync>();
         }
 
+        // ---- Final boss'u Gulyabani görseliyle giydir + bar etiketi ----
+        public static string GulyabaniGiydir()
+        {
+            // Sprite importu: 300x300, içerik ~2.7 birim boy (ppu 100).
+            string yol = "Assets/_Project/Art/Characters/Enemies/gulyaban SPELL.png";
+            var imp = AssetImporter.GetAtPath(yol) as TextureImporter;
+            if (imp == null) return "gulyaban SPELL.png yok";
+            imp.textureType = TextureImporterType.Sprite;
+            imp.spriteImportMode = SpriteImportMode.Single;
+            imp.spritePixelsPerUnit = 100f;
+            imp.filterMode = FilterMode.Point;
+            imp.textureCompression = TextureImporterCompression.Uncompressed;
+            imp.mipmapEnabled = false;
+            imp.SaveAndReimport();
+            var gulyaban = AssetDatabase.LoadAssetAtPath<Sprite>(yol);
+            if (gulyaban == null) return "sprite yuklenemedi";
+
+            EditorSceneManager.SaveOpenScenes();
+            var scene = EditorSceneManager.OpenScene("Assets/Scenes/BossFightArea.unity");
+
+            var boss = GameObject.Find("Boss");
+            if (boss == null) return "Boss yok";
+
+            // --- Görsel: kırmızı küp → büyücü Gulyabani ---
+            var sr = boss.GetComponent<SpriteRenderer>();
+            sr.sprite = gulyaban;
+            sr.color = Color.white;
+            // Görsel SOLA bakıyor; BossController yön kodu sign×originalScale.x
+            // kullanır → başlangıç ölçeğini -1 yapınca yönler doğru eşleşir.
+            boss.transform.localScale = new Vector3(-1f, 1f, 1f);
+
+            // Küp döneminden kalan göz artık gereksiz.
+            var eye = boss.transform.Find("Eye");
+            if (eye != null) eye.gameObject.SetActive(false);
+
+            // Hitbox: büyücünün gövdesine göre.
+            var kapsul = boss.GetComponent<CapsuleCollider2D>();
+            if (kapsul != null)
+            {
+                kapsul.size = new Vector2(1.2f, 2.6f);
+                kapsul.offset = new Vector2(0f, -0.1f);
+            }
+
+            // --- Bar üstüne GULYABANI etiketi ---
+            var bc = boss.GetComponent<BossController>();
+            string etiketDurum = "barParent yok";
+            if (bc != null && bc.healthBarParent != null)
+            {
+                var parent = bc.healthBarParent.transform;
+                var eskiEtiket = parent.Find("GulyabaniEtiket");
+                if (eskiEtiket != null) Object.DestroyImmediate(eskiEtiket.gameObject);
+
+                var etiket = new GameObject("GulyabaniEtiket", typeof(RectTransform));
+                etiket.transform.SetParent(parent, false);
+                var rt = etiket.GetComponent<RectTransform>();
+                var parentRt = parent.GetComponent<RectTransform>();
+                float barH = parentRt != null ? parentRt.rect.height : 30f;
+                rt.anchorMin = new Vector2(0.5f, 1f);
+                rt.anchorMax = new Vector2(0.5f, 1f);
+                rt.pivot = new Vector2(0.5f, 0f);
+                rt.anchoredPosition = new Vector2(0f, 4f); // barın hemen üstü
+                rt.sizeDelta = new Vector2(400f, barH + 10f);
+
+                var tmp = etiket.AddComponent<TMPro.TextMeshProUGUI>();
+                tmp.text = "GULYABANI";
+                tmp.fontSize = 30f;
+                tmp.fontStyle = TMPro.FontStyles.Bold;
+                tmp.alignment = TMPro.TextAlignmentOptions.Center;
+                tmp.color = new Color(0.85f, 0.2f, 0.2f); // tehdit kırmızısı
+                etiketDurum = "etiket eklendi";
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "gulyabani giydirildi | " + etiketDurum;
+        }
+
         // ---- Ana menü arayüzünü oyun temasıyla giydir ----
         // Arka plan: gokyuzu + dağ silüeti. Butonlar: koyu bordo zemin +
         // altın yazı. Başlık metinleri altın. Buton işlevlerine DOKUNMAZ.
