@@ -2086,7 +2086,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &284661164
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -3048,7 +3048,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::LevelGecis
   sonrakiSahneAdi: BossFightArea
-  fadePaneli: {fileID: 1835143613}
+  fadePaneli: {fileID: 2126377518}
   fadeHizi: 1.5
 --- !u!61 &425919705
 BoxCollider2D:
@@ -5866,7 +5866,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &886139365
 RectTransform:
   m_ObjectHideFlags: 0
@@ -6749,10 +6749,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e4f41460ff55eea41970c140444c6734, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PauseManager
-  pauseBackground: {fileID: 1321027451}
-  pauseMenuUI: {fileID: 89681688}
-  settingsMenuUI: {fileID: 440279102}
-  volumeSlider: {fileID: 903473642}
+  pauseBackground: {fileID: 1871059546}
+  pauseMenuUI: {fileID: 1874658100}
+  settingsMenuUI: {fileID: 2047822957}
+  volumeSlider: {fileID: 484600993}
 --- !u!4 &974489818
 Transform:
   m_ObjectHideFlags: 0

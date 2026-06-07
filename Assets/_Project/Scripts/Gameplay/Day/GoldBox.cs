@@ -3,9 +3,7 @@ using Ulak.Core;
 
 namespace Ulak.Gameplay
 {
-    /// <summary>
-    /// Gündüz modu koşu puanı. Sahne başında sıfırlanır (HorseController.Awake).
-    /// </summary>
+    // --- DİĞER KODLARIN ÇÖKMESİNİ ENGELLEYEN PUAN SINIFI BURADA ---
     public static class RideScore
     {
         public static int Score { get; private set; }
@@ -14,25 +12,37 @@ namespace Ulak.Gameplay
     }
 
     /// <summary>
-    /// Altın kutu (greybox v1):
-    ///  - Trigger collider: at çarpsa da etkilenmez, içinden geçer.
-    ///  - Kılıç saldırısı isabet ederse parçalanır ve puan kazandırır.
-    ///  - SwordAttack, IDamageable üzerinden vurur (Enemy layer'da olmalı).
+    /// Altın kutu yerine kullanılan Pastırma objesi:
+    ///  - Kılıç saldırısı isabet ederse parçalanır ve atın hızını artırır.
     /// </summary>
     public class GoldBox : MonoBehaviour, IDamageable
     {
-        [Tooltip("Kırılınca kazanılan puan.")]
-        [SerializeField] private int points = 10;
+        [Tooltip("Toplanınca atın hızına eklenecek miktar.")]
+        [SerializeField] private float speedBoost = 1.0f;
 
-        private bool _broken;
+        private bool _collected;
 
-        public bool IsAlive => !_broken;
+        public bool IsAlive => !_collected;
 
         public void TakeDamage(int amount, Vector2 knockback)
         {
-            if (_broken) return;
-            _broken = true;
-            RideScore.Add(points);
+            if (_collected) return;
+            _collected = true;
+
+            // Sahnedeki atı bul
+            HorseController horse = Object.FindFirstObjectByType<HorseController>();
+
+            if (horse != null)
+            {
+                // Atın hızını artır
+                horse.ApplySpeedBoost(speedBoost);
+            }
+
+            // NOT: Eğer pastırma alınca "Hızın yanında 10 Puan da versin" dersen
+            // aşağıdaki satırın başındaki yorum (//) işaretini silmen yeterli!
+            // RideScore.Add(10);
+
+            // Objeyi yok et
             Destroy(gameObject);
         }
     }
