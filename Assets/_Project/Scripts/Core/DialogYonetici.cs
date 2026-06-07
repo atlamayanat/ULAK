@@ -22,6 +22,7 @@ namespace Ulak.Core
         private GameObject _balon;
         private SpriteRenderer _kare;
         private TextMesh _yazi;
+        private TextMesh _ipucu;
 
         // ---- akış ----
         private List<Replik> _replikler;
@@ -87,10 +88,14 @@ namespace Ulak.Core
             string metin = r.Konusan + ":\n" + Sar(r.Metin, 30);
             _yazi.text = metin;
 
-            // Kareyi metne göre boyutla.
+            // Kareyi metne göre boyutla (ipucu satırı için altta ekstra pay).
             int satirSayisi = metin.Split('\n').Length;
-            float h = 0.35f * satirSayisi + 0.3f;
+            float h = 0.35f * satirSayisi + 0.55f;
             _kare.transform.localScale = new Vector3(4.6f, h, 1f);
+
+            // Ana metni hafif yukarı al, ipucunu kutunun en altına yerleştir.
+            _yazi.transform.localPosition = new Vector3(0f, 0.1f, 0f);
+            _ipucu.transform.localPosition = new Vector3(0f, -h * 0.5f + 0.16f, 0f);
 
             _balon.SetActive(true);
         }
@@ -128,6 +133,19 @@ namespace Ulak.Core
             _yazi.fontSize = 48;
             _yazi.color = Color.white;
             yaziGo.GetComponent<MeshRenderer>().sortingOrder = 201;
+
+            // Alt ipucu: "devam etmek için tıklayın"
+            var ipucuGo = new GameObject("Ipucu");
+            ipucuGo.transform.SetParent(_balon.transform, false);
+            _ipucu = ipucuGo.AddComponent<TextMesh>();
+            _ipucu.anchor = TextAnchor.MiddleCenter;
+            _ipucu.alignment = TextAlignment.Center;
+            _ipucu.characterSize = 0.045f;
+            _ipucu.fontSize = 40;
+            _ipucu.fontStyle = FontStyle.Italic;
+            _ipucu.color = new Color(0.65f, 0.65f, 0.7f);
+            _ipucu.text = "devam etmek için tıklayın";
+            ipucuGo.GetComponent<MeshRenderer>().sortingOrder = 201;
 
             _balon.SetActive(false);
         }
@@ -176,6 +194,10 @@ namespace Ulak.Core
             }
             var rb = p.GetComponent<Rigidbody2D>();
             if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+
+            // Yürüme animasyonunda takılı kalmasın → idle setine dön.
+            var book = p.GetComponent<SpriteFlipbook>();
+            if (book != null) book.SetMoving(false);
         }
 
         private void OyuncuyuSerbestBirak()

@@ -6685,6 +6685,8 @@ MonoBehaviour:
   bolumNo: 4
   replikDosyasi: {fileID: 4900000, guid: 021c847cecc610f489e11e90d2cf78f5, type: 3}
   tiklamaMesafesi: 7
+  otomatikMesafe: 2.3
+  ikonSprite: {fileID: 21300000, guid: a971f375decde874f9b6a5cc961dcf8f, type: 3}
 --- !u!1 &1341456546
 GameObject:
   m_ObjectHideFlags: 0
