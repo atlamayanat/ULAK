@@ -132,6 +132,7 @@ GameObject:
   - component: {fileID: 856074}
   - component: {fileID: 856075}
   - component: {fileID: 856076}
+  - component: {fileID: 856077}
   m_Layer: 7
   m_Name: Boss
   m_TagString: Boss
@@ -188,7 +189,7 @@ SpriteRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 2
   m_MaskInteraction: 0
-  m_Sprite: {fileID: 21300000, guid: 4d667fceb4e257d4586d102986c50126, type: 3}
+  m_Sprite: {fileID: 21300000, guid: b10d7df09f4291645ad971a05eaae2a3, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -207,8 +208,8 @@ Transform:
   m_GameObject: {fileID: 856070}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.02, y: 5.14, z: 0}
-  m_LocalScale: {x: -1.177, y: 1.1844, z: 1}
+  m_LocalPosition: {x: -4.3043, y: 5.3972, z: 0}
+  m_LocalScale: {x: -1.368498, y: 1.3667976, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 695483609}
@@ -258,6 +259,11 @@ MonoBehaviour:
   kureOmru: 4.5
   buyuMinMesafe: 4.5
   buyuBeklemesi: 10
+  idleKareleri:
+  - {fileID: 21300000, guid: b10d7df09f4291645ad971a05eaae2a3, type: 3}
+  - {fileID: 21300000, guid: c2f13bb13de82a74fb86f89647049b4d, type: 3}
+  penceKaresi: {fileID: 21300000, guid: 84c8aba53c8e7b14dac5c496ac0671fb, type: 3}
+  buyuKaresi: {fileID: 21300000, guid: 158a910b4ca70794783ee7577e8ccef7, type: 3}
   isinlanmaNoktalari:
   - {fileID: 970533542}
   - {fileID: 313523888}
@@ -332,6 +338,28 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: -0.1}
   m_Size: {x: 1.2, y: 2.6}
   m_Direction: 0
+--- !u!114 &856077
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 856070}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d9acfbec2df54f4e87259c1462f7c54, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Ulak.Core.SpriteFlipbook
+  frames:
+  - {fileID: 21300000, guid: b10d7df09f4291645ad971a05eaae2a3, type: 3}
+  - {fileID: 21300000, guid: c2f13bb13de82a74fb86f89647049b4d, type: 3}
+  frameInterval: 0.5
+  walkFrames:
+  - {fileID: 21300000, guid: b10d7df09f4291645ad971a05eaae2a3, type: 3}
+  - {fileID: 21300000, guid: c2f13bb13de82a74fb86f89647049b4d, type: 3}
+  walkFrameInterval: 0.3
+  attackFrames: []
+  attackFrameInterval: 0.1
 --- !u!1 &30982834
 GameObject:
   m_ObjectHideFlags: 0
@@ -378,6 +406,7 @@ MonoBehaviour:
   kararmaTetikX: 1
   finalVideo: {fileID: 32900000, guid: 32bb54089c2ceb641a448ed570916465, type: 3}
   videoSuresi: 0
+  yatanGulyabani: {fileID: 21300000, guid: 05ead994270a2d140944fb07abb62d6d, type: 3}
 --- !u!4 &30982836
 Transform:
   m_ObjectHideFlags: 0
@@ -518,8 +547,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 0, y: 4}
-  m_SizeDelta: {x: 400, y: 70.210205}
+  m_AnchoredPosition: {x: 0.00003103609, y: 6}
+  m_SizeDelta: {x: 600, y: 54}
   m_Pivot: {x: 0.5, y: 0}
 --- !u!114 &119542623
 MonoBehaviour:
@@ -551,7 +580,7 @@ MonoBehaviour:
   m_fontColor32:
     serializedVersion: 2
     rgba: 4281545689
-  m_fontColor: {r: 0.85, g: 0.2, b: 0.2, a: 1}
+  m_fontColor: {r: 0.92, g: 0.14, b: 0.14, a: 1}
   m_enableVertexGradient: 0
   m_colorMode: 3
   m_fontColorGradient:
@@ -568,8 +597,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 30
-  m_fontSizeBase: 30
+  m_fontSize: 46
+  m_fontSizeBase: 46
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -578,7 +607,7 @@ MonoBehaviour:
   m_HorizontalAlignment: 2
   m_VerticalAlignment: 512
   m_textAlignment: 65535
-  m_characterSpacing: 0
+  m_characterSpacing: 8
   m_characterHorizontalScale: 1
   m_wordSpacing: 0
   m_lineSpacing: 0

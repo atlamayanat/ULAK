@@ -1163,6 +1163,54 @@ namespace Ulak.EditorTools
             return "gulyabani giydirildi | " + etiketDurum;
         }
 
+        // ---- GULYABANI etiketini büyüt ve barın görsel merkezine hizala ----
+        public static string GulyabaniEtiketiBuyut()
+        {
+            EditorSceneManager.SaveOpenScenes();
+            var scene = EditorSceneManager.OpenScene("Assets/Scenes/BossFightArea.unity");
+
+            var boss = GameObject.Find("Boss");
+            var bc = boss != null ? boss.GetComponent<BossController>() : null;
+            if (bc == null || bc.healthBarParent == null) return "bar yok";
+
+            var parent = bc.healthBarParent.transform;
+            var etiket = parent.Find("GulyabaniEtiket");
+            if (etiket == null) return "etiket yok";
+
+            var rt = etiket.GetComponent<RectTransform>();
+            var tmp = etiket.GetComponent<TMPro.TextMeshProUGUI>();
+            var parentRt = parent.GetComponent<RectTransform>();
+
+            // Barın GERÇEK görsel merkezi: dolgu rect'inin dünya merkezini
+            // parent yerel uzayına çevir (parent genişse/kaymışsa da ortalar).
+            rt.anchorMin = new Vector2(0.5f, 1f);
+            rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            float kaymaX = 0f;
+            if (bc.healthBarFill != null && parentRt != null)
+            {
+                var fillRt = bc.healthBarFill.rectTransform;
+                Vector3 dunyaMerkez = fillRt.TransformPoint(fillRt.rect.center);
+                Vector3 lokal = parentRt.InverseTransformPoint(dunyaMerkez);
+                kaymaX = lokal.x - parentRt.rect.center.x;
+            }
+            rt.anchoredPosition = new Vector2(kaymaX, 6f); // barın hemen üstü, tam ortada
+            rt.sizeDelta = new Vector2(600f, 54f);
+
+            // Daha belirgin: büyük, kalın, aralıklı, koyu kırmızı.
+            tmp.fontSize = 46f;
+            tmp.fontStyle = TMPro.FontStyles.Bold;
+            tmp.characterSpacing = 8f;
+            tmp.alignment = TMPro.TextAlignmentOptions.Center;
+            tmp.color = new Color(0.92f, 0.14f, 0.14f);
+            tmp.enableAutoSizing = false;
+
+            EditorUtility.SetDirty(tmp);
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "etiket buyutuldu: 46pt bold, kayma=" + kaymaX.ToString("F1");
+        }
+
         // ---- Ana menü arayüzünü oyun temasıyla giydir ----
         // Arka plan: gokyuzu + dağ silüeti. Butonlar: koyu bordo zemin +
         // altın yazı. Başlık metinleri altın. Buton işlevlerine DOKUNMAZ.

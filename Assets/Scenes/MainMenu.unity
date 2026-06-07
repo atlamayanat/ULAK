@@ -893,7 +893,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f4c75a1a0d3b6164d81313aaa2480eab, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MainMenuManager
-  targetScene: 3
+  targetScene: 4
 --- !u!4 &1464887519
 Transform:
   m_ObjectHideFlags: 0
