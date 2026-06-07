@@ -207,8 +207,8 @@ Transform:
   m_GameObject: {fileID: 856070}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -4.35, y: 4.44, z: 0}
-  m_LocalScale: {x: -1, y: 1, z: 1}
+  m_LocalPosition: {x: -4.02, y: 5.14, z: 0}
+  m_LocalScale: {x: -1.177, y: 1.1844, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 695483609}
@@ -232,18 +232,42 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
-  maxHealth: 1000
+  maxHealth: 1
   healthBarFill: {fileID: 1976213019}
   healthBarParent: {fileID: 1718305940}
-  baseMoveSpeed: 2
-  meleeRange: 1.25
-  attackCooldown: 2
+  baseMoveSpeed: 2.2
+  meleeRange: 3.2
+  attackCooldown: 3.2
   meleeDamage: 3
   contactDamage: 1
   antiKiteSuresi: 5
   rangedProjectilePrefab: {fileID: 4786662909464275072, guid: e92ed6a5d0e63104a8f93ec32e5168df, type: 3}
   meleeVisualPrefab: {fileID: 7034560182786739119, guid: 88aeb46439145274b8faa870790b471f, type: 3}
   firePoint: {fileID: 785674497}
+  maviAtesKareleri:
+  - {fileID: 1636730618, guid: b7506be1b06970e4abb53f17072ff945, type: 3}
+  - {fileID: -2110577068, guid: b7506be1b06970e4abb53f17072ff945, type: 3}
+  - {fileID: 922055941, guid: b7506be1b06970e4abb53f17072ff945, type: 3}
+  - {fileID: 1953876550, guid: b7506be1b06970e4abb53f17072ff945, type: 3}
+  - {fileID: 51240553, guid: b7506be1b06970e4abb53f17072ff945, type: 3}
+  kureSayisi: 4
+  yogunlasmaSuresi: 1
+  kureAraligi: 0.12
+  kureHizi: 5
+  kureHasari: 10
+  kureOmru: 4.5
+  buyuMinMesafe: 4.5
+  buyuBeklemesi: 10
+  isinlanmaNoktalari:
+  - {fileID: 970533542}
+  - {fileID: 313523888}
+  - {fileID: 1065016196}
+  - {fileID: 2103438436}
+  - {fileID: 914602949}
+  - {fileID: 1776845322}
+  isinlanmaBeklemesi: 15
+  isinlanmaMinMesafe: 6
+  isinlanmaFadeSuresi: 0.5
 --- !u!50 &856075
 Rigidbody2D:
   serializedVersion: 5
@@ -308,6 +332,67 @@ CapsuleCollider2D:
   m_Offset: {x: 0, y: -0.1}
   m_Size: {x: 1.2, y: 2.6}
   m_Direction: 0
+--- !u!1 &30982834
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 30982836}
+  - component: {fileID: 30982835}
+  m_Layer: 0
+  m_Name: GulyabaniFinal
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &30982835
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 30982834}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4fe8ed34098d9cb4584b99ab02af2f21, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Ulak.Gameplay.GulyabaniFinalSahnesi
+  oyuncuNoktasi: {fileID: 1065016196}
+  bossNoktasi: {fileID: 914602949}
+  kurtKosuKareleri:
+  - {fileID: -2008105750, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  - {fileID: 1862595128, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  - {fileID: -734899066, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  - {fileID: -2020180446, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  - {fileID: 2019287728, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  - {fileID: -1267359168, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  kurtOlcek: 1.8
+  kurtSayisi: 12
+  kurtHizi: 9
+  kurtAraligi: 0.12
+  kararmaSuresi: 0.35
+  kararmaTetikX: 1
+  finalVideo: {fileID: 32900000, guid: 32bb54089c2ceb641a448ed570916465, type: 3}
+  videoSuresi: 0
+--- !u!4 &30982836
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 30982834}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &84942947
 GameObject:
   m_ObjectHideFlags: 0
@@ -1242,6 +1327,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &313523887
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 313523888}
+  m_Layer: 0
+  m_Name: IsinlanmaNoktasi_2
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &313523888
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 313523887}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -10.5, y: 0.9, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 421232533}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &320482402
 GameObject:
   m_ObjectHideFlags: 0
@@ -1333,6 +1449,139 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &336638899
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 336638903}
+  - component: {fileID: 336638902}
+  - component: {fileID: 336638901}
+  - component: {fileID: 336638900}
+  m_Layer: 0
+  m_Name: KurtYoldasYerel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &336638900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 336638899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 897c2b876fa07644e8930beae865b815, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Ulak.Gameplay.KurtYoldas
+  followOffset: {x: -2.2, y: -0.45}
+  followLerp: 8
+  playerTag: Player
+--- !u!114 &336638901
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 336638899}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2d9acfbec2df54f4e87259c1462f7c54, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Ulak.Core.SpriteFlipbook
+  frames:
+  - {fileID: -682037138, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  frameInterval: 0.1
+  walkFrames:
+  - {fileID: -2008105750, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  - {fileID: 1862595128, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  - {fileID: -734899066, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  - {fileID: -2020180446, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  - {fileID: 2019287728, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  - {fileID: -1267359168, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  walkFrameInterval: 0.1
+  attackFrames: []
+  attackFrameInterval: 0.1
+--- !u!212 &336638902
+SpriteRenderer:
+  serializedVersion: 2
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 336638899}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 9
+  m_MaskInteraction: 0
+  m_Sprite: {fileID: -682037138, guid: 5b22731c88ac82b479cc4d0bbe192d9d, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 1, y: 1}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_SpriteSortPoint: 0
+--- !u!4 &336638903
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 336638899}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -14.5, y: -3.8, z: 0}
+  m_LocalScale: {x: 1, y: 1.1205, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &355678406
 GameObject:
   m_ObjectHideFlags: 0
@@ -1373,8 +1622,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e42b9a8d1056e614f8aba747ae25d832, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ulak.Gameplay.KillCharges
-  maxCharges: 3
-  healCost: 3
+  maxCharges: 10
+  healYuzdesi: 0.1
+  healBeklemesi: 10
 --- !u!114 &355678408
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1427,7 +1677,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Ulak.Gameplay.PlayerController
   runSpeed: 6
-  jumpForce: 17
+  jumpForce: 20
   groundLayer:
     serializedVersion: 2
     m_Bits: 64
@@ -1767,6 +2017,43 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &421232532
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 421232533}
+  m_Layer: 0
+  m_Name: IsinlanmaNoktalari
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &421232533
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 421232532}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 970533542}
+  - {fileID: 313523888}
+  - {fileID: 1065016196}
+  - {fileID: 2103438436}
+  - {fileID: 914602949}
+  - {fileID: 1776845322}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &466291977
 GameObject:
   m_ObjectHideFlags: 0
@@ -2097,7 +2384,8 @@ GameObject:
   m_Component:
   - component: {fileID: 548503728}
   - component: {fileID: 548503727}
-  m_Layer: 0
+  - component: {fileID: 548503729}
+  m_Layer: 6
   m_Name: engel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2178,6 +2466,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!61 &548503729
+BoxCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 548503726}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0.019990921, y: 0.026654959}
+  m_SpriteTilingProperty:
+    border: {x: 0, y: 0, z: 0, w: 0}
+    pivot: {x: 0.5, y: 0.5}
+    oldSize: {x: 0.9807692, y: 1}
+    newSize: {x: 8.125858, y: 0.65812904}
+    adaptiveTilingThreshold: 0.5
+    drawMode: 2
+    adaptiveTiling: 0
+  m_AutoTiling: 0
+  m_Size: {x: 8.190927, y: 0.680141}
+  m_EdgeRadius: 0
 --- !u!1 &613784557
 GameObject:
   m_ObjectHideFlags: 0
@@ -2772,7 +3106,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &779709239
 Transform:
   m_ObjectHideFlags: 0
@@ -3292,6 +3626,68 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &914602948
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 914602949}
+  m_Layer: 0
+  m_Name: IsinlanmaNoktasi_5
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &914602949
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 914602948}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 4, y: -3.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 421232533}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &970533541
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 970533542}
+  m_Layer: 0
+  m_Name: IsinlanmaNoktasi_1
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &970533542
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 970533541}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -15, y: 0.9, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 421232533}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &983381905
 GameObject:
   m_ObjectHideFlags: 0
@@ -3382,6 +3778,37 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1065016195
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1065016196}
+  m_Layer: 0
+  m_Name: IsinlanmaNoktasi_3
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1065016196
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1065016195}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -6, y: -3.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 421232533}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1088991279
 GameObject:
@@ -4720,7 +5147,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1474454779
 Transform:
   m_ObjectHideFlags: 0
@@ -4935,7 +5362,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &1613290639
 Transform:
   m_ObjectHideFlags: 0
@@ -5563,6 +5990,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1776845321
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1776845322}
+  m_Layer: 0
+  m_Name: IsinlanmaNoktasi_6
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1776845322
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1776845321}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 9, y: -3.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 421232533}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1852801268
 GameObject:
   m_ObjectHideFlags: 0
@@ -5798,7 +6256,7 @@ Transform:
   m_GameObject: {fileID: 1879569890}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -5.97, y: -3.53, z: 0}
+  m_LocalPosition: {x: -6.04, y: -3.73, z: 0}
   m_LocalScale: {x: 1.4919, y: 1.3471, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -6076,7 +6534,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2067328378
 Transform:
   m_ObjectHideFlags: 0
@@ -6091,6 +6549,37 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2103438435
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2103438436}
+  m_Layer: 0
+  m_Name: IsinlanmaNoktasi_4
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2103438436
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2103438435}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -1, y: -3.5, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 421232533}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
@@ -6145,3 +6634,6 @@ SceneRoots:
   - {fileID: 1330525048}
   - {fileID: 1879569892}
   - {fileID: 1881544449}
+  - {fileID: 421232533}
+  - {fileID: 336638903}
+  - {fileID: 30982836}

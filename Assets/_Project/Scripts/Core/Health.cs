@@ -58,6 +58,13 @@ namespace Ulak.Core
             _dead = false;
         }
 
+        /// <summary>Kısmi iyileşme — canı en fazla Max'a kadar artırır (H ile can basma).</summary>
+        public void Heal(int amount)
+        {
+            if (_dead || amount <= 0) return;
+            _current = Mathf.Min(maxHealth, _current + amount);
+        }
+
         private void Die()
         {
             _dead = true;

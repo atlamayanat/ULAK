@@ -41,6 +41,32 @@ public class BossController : MonoBehaviour, IDamageable
     public GameObject meleeVisualPrefab;
     public Transform firePoint;
 
+    [Header("Büyü Atışı (Mavi Ateş)")]
+    [Tooltip("Mavi ateş animasyon kareleri (sheet'ten dilimli).")]
+    public Sprite[] maviAtesKareleri;
+    public int kureSayisi = 4;
+    public float yogunlasmaSuresi = 1f;     // küreler yanında bekler
+    public float kureAraligi = 0.12f;       // peş peşe fırlatma arası
+    public float kureHizi = 5f;
+    public int kureHasari = 10;
+    public float kureOmru = 4.5f;
+    [Tooltip("Büyü için gereken asgari oyuncu mesafesi (yakında pençe tercih edilir).")]
+    public float buyuMinMesafe = 4.5f;
+    [Tooltip("İki büyü atışı arasındaki bekleme süresi (sn).")]
+    public float buyuBeklemesi = 10f;
+    private float sonrakiBuyu = 0f;
+
+    [Header("Işınlanma")]
+    [Tooltip("Sabit ışınlanma noktaları — oyuncuya en yakın olana ışınlanır.")]
+    public Transform[] isinlanmaNoktalari;
+    public float isinlanmaBeklemesi = 15f;
+    [Tooltip("Oyuncu bundan uzaksa ışınlanabilir.")]
+    public float isinlanmaMinMesafe = 6f;
+    public float isinlanmaFadeSuresi = 0.5f;
+    private float sonrakiIsinlanma = 0f;
+    private float sonYuzDonusu = 0f; // yüz çevirme titreme kilidi
+    private static readonly Color isinlanmaRengi = new Color(0.45f, 0.75f, 1f);
+
     private SpriteRenderer sr;
     private Color originalColor;
     private Vector3 originalScale;
@@ -81,6 +107,8 @@ public class BossController : MonoBehaviour, IDamageable
 
         originalScale = transform.localScale;
         lastCombatTime = Time.time;
+        sonrakiIsinlanma = Time.time + 5f; // açılışta hemen ışınlanmasın
+        sonrakiBuyu = Time.time + 3f;      // açılışta hemen küre yağdırmasın
 
         // Haritadaki tüm görünmez zıplama collider'larını dinamik olarak bulur
         tumZiplamaNoktalari = FindObjectsByType<BossZiplamaNoktasi>(FindObjectsSortMode.None);
@@ -101,12 +129,25 @@ public class BossController : MonoBehaviour, IDamageable
 
         float distX = player.position.x - transform.position.x;
         float distY = player.position.y - transform.position.y;
-        bool isGrounded = Physics2D.Raycast(transform.position, Vector2.down, 1.5f, groundLayer);
+        // Zemin kontrolü collider TABANINDAN yapılır — sprite büyüyünce merkezden
+        // atılan 1.5'lik ışın yere yetişmiyordu (büyü/ışınlanma/zıplama kilitleniyordu).
+        Vector2 taban = bossCollider != null
+            ? new Vector2(bossCollider.bounds.center.x, bossCollider.bounds.min.y + 0.05f)
+            : (Vector2)transform.position;
+        bool isGrounded = Physics2D.Raycast(taban, Vector2.down, 0.6f, groundLayer);
 
         Vector2 bakisYonu = new Vector2(Mathf.Sign(transform.localScale.x), 0);
         bool duvaraCarpti = Physics2D.Raycast(transform.position, bakisYonu, 1.2f, groundLayer);
 
         bool antiKiteAktif = (Time.time - lastCombatTime > antiKiteSuresi);
+
+        // --- IŞINLANMA: ara sıra oyuncunun yakınına belir ---
+        if (Time.time >= sonrakiIsinlanma && isGrounded
+            && Vector2.Distance(transform.position, player.position) > isinlanmaMinMesafe)
+        {
+            StartCoroutine(Isinlan());
+            return;
+        }
 
         // --- SALDIRI KARAR MEKANİZMASI ---
         if (Time.time >= nextAttackTime && isGrounded)
@@ -116,12 +157,14 @@ public class BossController : MonoBehaviour, IDamageable
 
             if (ayniKatta && distanceToPlayer <= meleeRange && !duvaraCarpti)
             {
-                StartCoroutine(SaldiriAnimasyonu(true));
+                StartCoroutine(SaldiriAnimasyonu(true)); // PENÇE
                 return;
             }
-            else if (antiKiteAktif || (ayniKatta && !duvaraCarpti))
+            else if (Time.time >= sonrakiBuyu
+                     && (antiKiteAktif
+                         || (ayniKatta && !duvaraCarpti && distanceToPlayer >= buyuMinMesafe)))
             {
-                StartCoroutine(SaldiriAnimasyonu(false));
+                StartCoroutine(SaldiriAnimasyonu(false)); // BÜYÜ ATIŞI
                 return;
             }
         }
@@ -132,9 +175,7 @@ public class BossController : MonoBehaviour, IDamageable
         if (antiKiteAktif && isGrounded)
         {
             dirX = 0f;
-            float yon = Mathf.Sign(distX);
-            if (yon != 0)
-                transform.localScale = new Vector3(yon * originalScale.x, originalScale.y, originalScale.z);
+            YuzCevir(distX);
         }
         else
         {
@@ -174,7 +215,9 @@ public class BossController : MonoBehaviour, IDamageable
             // 3. DURUM: AYNI KATTALARSA
             else
             {
-                if (Mathf.Abs(distX) > 0.2f)
+                // Ölü bölge geniş tutuldu — oyuncu dibimizdeyken her karede
+                // sağ-sol işaret değiştirip titremeyelim.
+                if (Mathf.Abs(distX) > 0.6f)
                     dirX = Mathf.Sign(distX);
             }
 
@@ -187,10 +230,21 @@ public class BossController : MonoBehaviour, IDamageable
         rb.linearVelocity = new Vector2(dirX * currentMoveSpeed, rb.linearVelocity.y);
 
         if (dirX != 0 && !antiKiteAktif)
-        {
-            float yeniYönX = Mathf.Sign(dirX) * originalScale.x;
-            transform.localScale = new Vector3(yeniYönX, originalScale.y, originalScale.z);
-        }
+            YuzCevir(dirX);
+    }
+
+    /// <summary>
+    /// Yüz çevirme — hızlı sağ-sol titremesini önlemek için en erken
+    /// 0.3 sn'de bir döner. Saldırı anında zorla=true ile anında döner.
+    /// </summary>
+    void YuzCevir(float yon, bool zorla = false)
+    {
+        if (yon == 0) return;
+        float hedefX = Mathf.Sign(yon) * originalScale.x;
+        if (Mathf.Approximately(transform.localScale.x, hedefX)) return; // zaten o yöne bakıyor
+        if (!zorla && Time.time - sonYuzDonusu < 0.3f) return;           // titreme kilidi
+        sonYuzDonusu = Time.time;
+        transform.localScale = new Vector3(hedefX, originalScale.y, originalScale.z);
     }
 
     IEnumerator SaldiriAnimasyonu(bool isMelee)
@@ -201,17 +255,156 @@ public class BossController : MonoBehaviour, IDamageable
         float dirX = Mathf.Sign(player.position.x - transform.position.x);
         if (dirX != 0)
         {
-            transform.localScale = new Vector3(dirX * originalScale.x, originalScale.y, originalScale.z);
+            YuzCevir(dirX, true); // vururken hedefe mutlaka dön
         }
 
         yield return new WaitForSeconds(0.2f);
 
         if (isMelee) MeleeAttack();
-        else RangedAttack();
+        else yield return BuyuAtisi(); // 1 sn yoğunlaşma + 4 küre peş peşe
 
         lastCombatTime = Time.time;
         yield return new WaitForSeconds(0.5f);
         isAttacking = false;
+    }
+
+    /// <summary>
+    /// BÜYÜ ATIŞI: 1 sn yoğunlaşır (küreler yanında süzülür), ardından
+    /// küreleri peş peşe oyuncuya gönderir. Küreler gevşek güdümlüdür —
+    /// kaçılabilir ya da kılıçla patlatılabilir.
+    /// </summary>
+    IEnumerator BuyuAtisi()
+    {
+        nextAttackTime = Time.time + attackCooldown;
+        sonrakiBuyu = Time.time + buyuBeklemesi; // büyünün kendi bekleme süresi
+
+        // Küreleri yanında çağır (yay düzeni).
+        Vector2[] ofsetler =
+        {
+            new Vector2(-1.3f, 1.6f), new Vector2(-0.45f, 2.1f),
+            new Vector2(0.45f, 2.1f), new Vector2(1.3f, 1.6f)
+        };
+
+        var kureler = new System.Collections.Generic.List<Ulak.Gameplay.MaviAtesTopu>();
+        int adet = Mathf.Min(kureSayisi, ofsetler.Length);
+        for (int i = 0; i < adet; i++)
+        {
+            var go = new GameObject("MaviAtes");
+            go.layer = gameObject.layer; // Enemy → oyuncunun kılıcı vurabilir
+            go.transform.position = (Vector2)transform.position + ofsetler[i];
+            go.transform.localScale = Vector3.one * 0.9f;
+
+            var srK = go.AddComponent<SpriteRenderer>();
+            if (maviAtesKareleri != null && maviAtesKareleri.Length > 0)
+                srK.sprite = maviAtesKareleri[0];
+            srK.sortingOrder = 11;
+
+            if (maviAtesKareleri != null && maviAtesKareleri.Length > 1)
+            {
+                var book = go.AddComponent<SpriteFlipbook>();
+                book.SetFrameInterval(0.1f);
+                // frames alanı private — yansıma ile doldur (prefabsız üretim).
+                typeof(SpriteFlipbook)
+                    .GetField("frames", System.Reflection.BindingFlags.Instance |
+                                        System.Reflection.BindingFlags.NonPublic)
+                    ?.SetValue(book, maviAtesKareleri);
+            }
+
+            var col = go.AddComponent<CircleCollider2D>();
+            col.isTrigger = true;
+            col.radius = 0.3f;
+
+            var top = go.AddComponent<Ulak.Gameplay.MaviAtesTopu>();
+            top.Kur(transform, ofsetler[i], player, kureHizi, kureHasari, kureOmru, i * 1.7f);
+            kureler.Add(top);
+        }
+
+        // 1 sn yoğunlaşma — küreler yörüngede bekler.
+        yield return new WaitForSeconds(yogunlasmaSuresi);
+
+        // Peş peşe fırlat.
+        foreach (var k in kureler)
+        {
+            if (k != null) k.Firlat();
+            yield return new WaitForSeconds(kureAraligi);
+        }
+    }
+
+    /// <summary>
+    /// IŞINLANMA: maviye dönüp saydamlaşarak kaybolur, oyuncunun yakınında
+    /// (dibinde değil) ters animasyonla belirir.
+    /// </summary>
+    IEnumerator Isinlan()
+    {
+        sonrakiIsinlanma = Time.time + isinlanmaBeklemesi;
+
+        Vector3 hedefPoz;
+        if (isinlanmaNoktalari != null && isinlanmaNoktalari.Length > 0)
+        {
+            // Sabit noktalardan OYUNCUYA en yakın olanı seç.
+            Transform enIyi = null;
+            float enKisa = float.MaxValue;
+            foreach (var n in isinlanmaNoktalari)
+            {
+                if (n == null) continue;
+                float m = Vector2.Distance(n.position, player.position);
+                if (m < enKisa) { enKisa = m; enIyi = n; }
+            }
+            if (enIyi == null) yield break;
+            hedefPoz = new Vector3(enIyi.position.x, enIyi.position.y, transform.position.z);
+        }
+        else
+        {
+            // Yedek: nokta tanımlanmamışsa oyuncunun 2.5-4 birim yanına ışınlan.
+            float yan = Random.value < 0.5f ? -1f : 1f;
+            float hedefX = Mathf.Clamp(player.position.x + yan * Random.Range(2.5f, 4f), -17.5f, 9.5f);
+            var zemin = Physics2D.Raycast(
+                new Vector2(hedefX, player.position.y + 3f), Vector2.down, 14f, groundLayer);
+            if (zemin.collider == null) yield break; // güvenli zemin yok — vazgeç
+            hedefPoz = new Vector3(hedefX, zemin.point.y + 1.45f, transform.position.z);
+        }
+
+        // Y'yi zemine oturt — nokta havada dursa bile boss yere basar.
+        var zem = Physics2D.Raycast((Vector2)hedefPoz + Vector2.up * 1.5f, Vector2.down, 12f, groundLayer);
+        if (zem.collider != null) hedefPoz.y = zem.point.y + 1.7f;
+
+        isLeaping = true; // mevcut AI kapıları bu bayrağı zaten sayıyor
+        rb.linearVelocity = Vector2.zero;
+        rb.bodyType = RigidbodyType2D.Kinematic;
+        if (bossCollider != null) bossCollider.enabled = false;
+
+        // Maviye dönüp saydamlaş.
+        yield return RenkGecisi(originalColor, isinlanmaRengi, 1f, 0f, isinlanmaFadeSuresi);
+
+        transform.position = hedefPoz;
+
+        // Yeni konumda ters animasyonla belir.
+        yield return RenkGecisi(isinlanmaRengi, originalColor, 0f, 1f, isinlanmaFadeSuresi);
+
+        if (bossCollider != null) bossCollider.enabled = true;
+        rb.bodyType = RigidbodyType2D.Dynamic;
+        isLeaping = false;
+        lastCombatTime = Time.time;
+    }
+
+    IEnumerator RenkGecisi(Color rBas, Color rSon, float aBas, float aSon, float sure)
+    {
+        float t = 0f;
+        while (t < sure)
+        {
+            t += Time.deltaTime;
+            if (sr != null)
+            {
+                Color c = Color.Lerp(rBas, rSon, t / sure);
+                c.a = Mathf.Lerp(aBas, aSon, t / sure);
+                sr.color = c;
+            }
+            yield return null;
+        }
+        if (sr != null)
+        {
+            Color son = rSon; son.a = aSon; sr.color = son;
+        }
     }
 
     private void OnTriggerStay2D(Collider2D collision)
@@ -331,13 +524,29 @@ public class BossController : MonoBehaviour, IDamageable
         currentHealth -= damage;
         lastCombatTime = Time.time;
 
+        // Boss dövüşünde canavar kesimi yok — her isabet oyuncuya 1 yük kazandırır.
+        if (player != null)
+        {
+            var yukler = player.GetComponentInParent<Ulak.Gameplay.KillCharges>();
+            if (yukler != null) yukler.Add(1);
+        }
+
         if (healthBarFill != null)
             healthBarFill.fillAmount = Mathf.Clamp01(currentHealth / maxHealth); // boyut sabit, dolgu boşalır
 
         if (currentHealth <= 0)
         {
             if (healthBarParent != null) Destroy(healthBarParent);
-            Destroy(gameObject);
+
+            // Son vuruş: boss ölmez — final ara sahnesi devreye girer.
+            var araSahne = FindFirstObjectByType<Ulak.Gameplay.GulyabaniFinalSahnesi>();
+            if (araSahne != null)
+            {
+                araSahne.Baslat(this);
+                return;
+            }
+
+            Destroy(gameObject); // ara sahne kurulmamışsa eski davranış
             return;
         }
 
