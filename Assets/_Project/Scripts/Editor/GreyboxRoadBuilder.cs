@@ -711,6 +711,7 @@ namespace Ulak.EditorTools
             SerializedSet(ai, "loseAggroRange", 14f);
             SerializedSet(ai, "contactCooldown", 0.5f);
             go.AddComponent<EnemyDeath>();
+            ApplyKarakuraVisual(go);
             return go;
         }
 
@@ -818,6 +819,71 @@ namespace Ulak.EditorTools
             go.AddComponent<EnemyDeath>();
             ApplyMerkutVisual(go);
             return go;
+        }
+
+        // ---- Karakura (ghoul) görsellerini bir objeye uygula ----
+        private static bool ApplyKarakuraVisual(GameObject go)
+        {
+            // 774x112 sheet = 3 kare (258x112): 2 emekleme + 1 pençe saldırısı.
+            // Yaratık SAĞA bakar.
+            Sprite[] all = GetOrCreateGridSprites(
+                "Assets/_Project/Art/Characters/Enemies/karakura.png", 258, 112, 80f, "karakura");
+            if (all == null || all.Length < 3) return false;
+
+            go.transform.localScale = Vector3.one; // 258x112 @80ppu = 3.2 x 1.4 kare
+
+            var sr = go.GetComponent<SpriteRenderer>();
+            sr.sprite = all[0];
+            sr.color = Color.white;
+
+            var col = go.GetComponent<BoxCollider2D>();
+            if (col != null)
+            {
+                col.size = new Vector2(1.8f, 0.95f); // alçak, uzun sürüngen gövde
+                col.offset = Vector2.zero;
+            }
+
+            var book = go.GetComponent<SpriteFlipbook>();
+            if (book == null) book = go.AddComponent<SpriteFlipbook>();
+            SerializedSet(book, "frames", new[] { all[0], all[1] });   // emekleme döngüsü
+            SerializedSet(book, "frameInterval", 0.18f);                // çevik sürünme
+            SerializedSet(book, "attackFrames", new[] { all[2] });      // pençe savurma
+            SerializedSet(book, "attackFrameInterval", 0.35f);          // saldırı karesi okunsun
+
+            var ai = go.GetComponent<SmallEnemyAI>();
+            if (ai != null)
+            {
+                SerializedSet(ai, "spriteFacesRight", true);  // ghoul SAĞA bakar
+                SerializedSet(ai, "attackHitRange", 2.0f);    // uzun pençe erişimi
+            }
+
+            var bar = go.GetComponent<HealthBar>();
+            if (bar != null) SerializedSet(bar, "offset", new Vector2(0f, 0.8f));
+
+            return true;
+        }
+
+        // ---- Sahnedeki TÜM Karakura küplerini ghoul modeline çevir (additive) ----
+        public static string ApplyKarakuraArtToScene()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("GECE-SAVAS") && !active.path.Contains("Road_Greybox"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene("Assets/_Project/Scenes/GECE-SAVAS.unity");
+            }
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            int n = 0;
+            foreach (var root in scene.GetRootGameObjects())
+            {
+                if (!root.name.StartsWith("Karakura")) continue;
+                if (ApplyKarakuraVisual(root)) n++;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "ghoul modeline cevrilen Karakura: " + n;
         }
 
         // ---- Kartal görsellerini bir Merküt objesine uygula ----
@@ -1018,6 +1084,97 @@ namespace Ulak.EditorTools
             col.size = Vector2.one;
 
             go.AddComponent<TiledBoxSync>();
+        }
+
+        // ---- AT-GUNDUZ yolu boyunca iki katmanlı orman serpiştir (additive) ----
+        // Ön katman: yol kenarında doğal aralıklı ağaçlar.
+        // Arka katman: küçük + koyu tonlu sık ağaç bandı (dağ ile yol arası derinlik).
+        // Kullanıcının elle koyduğu ağaçlara DOKUNMAZ; kendi gruplarını yeniden kurar.
+        public static string PlaceRoadTrees()
+        {
+            var active = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            if (!active.path.Contains("AT-GUNDUZ"))
+            {
+                EditorSceneManager.SaveOpenScenes();
+                EditorSceneManager.OpenScene("Assets/_Project/Scenes/AT-GUNDUZ.unity");
+            }
+
+            // tip: (dosya, ppu55te içerik tabanının sprite merkezine uzaklığı)
+            (string path, float bottomOffset)[] types =
+            {
+                ("Assets/_Project/Art/Environment/Trees/agac1.png", 1.42f),
+                ("Assets/_Project/Art/Environment/Trees/agac2.png", 1.73f),
+                ("Assets/_Project/Art/Environment/Trees/agac3.png", 1.69f),
+                ("Assets/_Project/Art/Environment/Trees/agac4.png", 2.07f),
+            };
+            var sprites = new Sprite[types.Length];
+            for (int i = 0; i < types.Length; i++)
+                sprites[i] = GetOrCreateSprite(types[i].path, 55f);
+
+            var scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+            foreach (var root in scene.GetRootGameObjects())
+                if (root.name == "YolAgaclari" || root.name == "ArkaOrman")
+                    Object.DestroyImmediate(root);
+
+            const float groundTop = -2.5f;
+            const float xStart = -16f, xEnd = 386f;
+
+            // --- ÖN KATMAN: yol kenarı ağaçları (doğal düzensiz aralık) ---
+            var on = new GameObject("YolAgaclari");
+            int onCount = 0;
+            float x = xStart;
+            int i2 = 0;
+            while (x < xEnd)
+            {
+                int t = (i2 * 31 + 7) % types.Length;          // deterministik tip karması
+                float s = 0.85f + ((i2 * 37) % 8) / 20f;       // 0.85 .. 1.20 ölçek
+                if (sprites[t] != null)
+                {
+                    var go = new GameObject("Agac_" + i2);
+                    go.transform.SetParent(on.transform);
+                    go.transform.position = new Vector3(x, groundTop + types[t].bottomOffset * s, 0f);
+                    go.transform.localScale = new Vector3(s, s, 1f);
+                    var sr = go.AddComponent<SpriteRenderer>();
+                    sr.sprite = sprites[t];
+                    sr.sortingOrder = -5;                       // oyunun arkası, ormanın önü
+                    sr.flipX = (i2 * 13) % 3 == 0;              // ara sıra aynala
+                    onCount++;
+                }
+                x += 14f + ((i2 * 53) % 13);                    // 14 .. 26 birim aralık
+                i2++;
+            }
+
+            // --- ARKA KATMAN: küçük, koyu, sık orman bandı ---
+            var arka = new GameObject("ArkaOrman");
+            var koyu = new Color(0.55f, 0.62f, 0.58f);          // soluk-koyu (uzaklık pusu)
+            int arkaCount = 0;
+            x = xStart - 4f;
+            int j = 0;
+            while (x < xEnd + 6f)
+            {
+                int t = (j * 17 + 3) % types.Length;
+                float s = 0.45f + ((j * 29) % 6) / 30f;         // 0.45 .. 0.62 ölçek
+                if (sprites[t] != null)
+                {
+                    var go = new GameObject("ArkaAgac_" + j);
+                    go.transform.SetParent(arka.transform);
+                    go.transform.position = new Vector3(
+                        x, groundTop + types[t].bottomOffset * s + 0.55f, 0f); // ufka doğru hafif yukarı
+                    go.transform.localScale = new Vector3(s, s, 1f);
+                    var sr = go.AddComponent<SpriteRenderer>();
+                    sr.sprite = sprites[t];
+                    sr.color = koyu;
+                    sr.sortingOrder = -60;                      // dağların önü, yol ağaçlarının arkası
+                    sr.flipX = (j * 7) % 2 == 0;
+                    arkaCount++;
+                }
+                x += 7f + ((j * 41) % 6);                       // 7 .. 12 birim — sık doku
+                j++;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "yol agaci=" + onCount + " arka orman=" + arkaCount;
         }
 
         // ---- Flamaları animasyonlu hale getir (additive) ----
