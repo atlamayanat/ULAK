@@ -1873,6 +1873,7 @@ GameObject:
   - component: {fileID: 266053712}
   - component: {fileID: 266053711}
   - component: {fileID: 266053710}
+  - component: {fileID: 266053713}
   m_Layer: 0
   m_Name: UmayTemsilcisi
   m_TagString: Untagged
@@ -1974,6 +1975,21 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &266053713
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 266053709}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 23f14b5b5edfea944967b1a0dbf2c620, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Ulak.Gameplay.DialogTetikleyici
+  bolumNo: 2
+  replikDosyasi: {fileID: 4900000, guid: 021c847cecc610f489e11e90d2cf78f5, type: 3}
+  tiklamaMesafesi: 7
 --- !u!1 &280792513
 GameObject:
   m_ObjectHideFlags: 0

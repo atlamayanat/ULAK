@@ -1086,6 +1086,63 @@ namespace Ulak.EditorTools
             go.AddComponent<TiledBoxSync>();
         }
 
+        // ---- Su akışını (UmayKoy paketi) diğer oyun sahnelerine kur ----
+        // BossFight HARİÇ: zeminin altına Su (SuAkinti + SpriteMask) ve
+        // SuYansima ekler. Var olan Su objesine dokunmaz (idempotent).
+        public static string AddWaterToScenes()
+        {
+            EditorSceneManager.SaveOpenScenes();
+
+            string[] targets =
+            {
+                "Assets/_Project/Scenes/ulgen_koy.unity",
+                "Assets/_Project/Scenes/erlik_koy.unity",
+                "Assets/_Project/Scenes/AT-GUNDUZ.unity",
+                "Assets/_Project/Scenes/GECE-SAVAS.unity"
+            };
+
+            var suSprite = AssetDatabase.LoadAssetAtPath<Sprite>(
+                "Assets/_Project/Art/Environment/Village/sudongusu.png");
+            var skySprite = AssetDatabase.LoadAssetAtPath<Sprite>(
+                "Assets/_Project/Art/Background/gokyuzu.png");
+            if (suSprite == null) return "sudongusu sprite yok";
+
+            var log = new System.Text.StringBuilder();
+            foreach (var path in targets)
+            {
+                if (!System.IO.File.Exists(path)) { log.Append(path).Append(":yok "); continue; }
+                var scene = EditorSceneManager.OpenScene(path);
+
+                bool varMi = false;
+                foreach (var root in scene.GetRootGameObjects())
+                    if (root.GetComponent<SuAkinti>() != null) { varMi = true; break; }
+                if (varMi) { log.Append(scene.name).Append(":zatenVar "); continue; }
+
+                // --- Su kaynağı (akıntı + maske) ---
+                var su = new GameObject("Su");
+                su.transform.position = new Vector3(0f, -4.2f, 0f);
+                su.transform.localScale = new Vector3(1.5f, 1.7f, 1f);
+                var sr = su.AddComponent<SpriteRenderer>();
+                sr.sprite = suSprite;
+                sr.sortingOrder = 3;
+                var mask = su.AddComponent<SpriteMask>();
+                mask.sprite = suSprite;
+                su.AddComponent<SuAkinti>();
+
+                // --- Yansıma (dağlar + gökyüzü, maskeli) ---
+                var yans = new GameObject("SuYansima");
+                yans.transform.position = Vector3.zero;
+                var sy = yans.AddComponent<SuYansima>();
+                if (skySprite != null) SerializedSet(sy, "skySprite", skySprite);
+
+                EditorSceneManager.MarkSceneDirty(scene);
+                EditorSceneManager.SaveScene(scene);
+                log.Append(scene.name).Append(":ok ");
+            }
+
+            return "su kurulumu: " + log;
+        }
+
         // ---- AT-GUNDUZ yolu boyunca iki katmanlı orman serpiştir (additive) ----
         // Ön katman: yol kenarında doğal aralıklı ağaçlar.
         // Arka katman: küçük + koyu tonlu sık ağaç bandı (dağ ile yol arası derinlik).
