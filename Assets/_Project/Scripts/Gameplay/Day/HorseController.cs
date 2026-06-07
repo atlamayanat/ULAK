@@ -138,6 +138,17 @@ namespace Ulak.Gameplay
             _speed = baseSpeed * stumbleFactor;
         }
 
+        /// <summary>
+        /// Dışarıdan (örn. pastırma toplayınca) atın hızını artırır.
+        /// Hız, maxSpeed'i geçemez.
+        /// </summary>
+        public void ApplySpeedBoost(float boostAmount)
+        {
+            // Mevcut hıza boost ekle ve maxSpeed ile sınırla.
+            _speed = Mathf.Min(maxSpeed, _speed + boostAmount);
+            Debug.Log("Pastırma Alındı! Yeni Hız: " + _speed);
+        }
+
         private static bool JumpPressedThisFrame()
         {
             var kb = Keyboard.current;
