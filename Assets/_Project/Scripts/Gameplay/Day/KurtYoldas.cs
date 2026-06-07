@@ -25,6 +25,7 @@ namespace Ulak.Gameplay
 
         private Transform _player;
         private SpriteRenderer _sr;
+        private Ulak.Core.SpriteFlipbook _book;
         private int _dir = 1;
         private float _lastPlayerX;
         private bool _sahip; // statik bayrağın sahibi bu kopya mı?
@@ -36,6 +37,7 @@ namespace Ulak.Gameplay
             _sahip = true;
             DontDestroyOnLoad(gameObject);
             _sr = GetComponent<SpriteRenderer>();
+            _book = GetComponent<Ulak.Core.SpriteFlipbook>();
             SceneManager.sceneLoaded += OnSceneLoaded;
             FindPlayer();
         }
@@ -78,10 +80,20 @@ namespace Ulak.Gameplay
             if (Mathf.Abs(dx) > 0.001f) _dir = dx > 0f ? 1 : -1;
             _lastPlayerX = _player.position.x;
 
+            var hedef = Hedef();
             transform.position = Vector3.Lerp(
-                transform.position, Hedef(), followLerp * Time.deltaTime);
+                transform.position, hedef, followLerp * Time.deltaTime);
 
             if (_sr != null) _sr.flipX = _dir < 0;
+
+            // Karakter durunca kurt da dursun: oyuncu hareketsiz VE kurt
+            // hedefine yetişmişse idle, aksi halde koşu animasyonu.
+            if (_book != null)
+            {
+                bool kosuyor = Mathf.Abs(dx) > 0.0008f
+                               || Vector2.Distance(transform.position, hedef) > 0.4f;
+                _book.SetMoving(kosuyor);
+            }
         }
     }
 }

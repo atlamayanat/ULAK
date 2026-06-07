@@ -58,6 +58,12 @@ namespace Ulak.Core
                 string replik = satir.Substring(sep + 1).Trim();
                 if (replik.Length == 0 || konusan.Contains("(")) continue;
 
+                // Parantez içindeki sahne yönergelerini metinden tamamen ayıkla.
+                replik = System.Text.RegularExpressions.Regex
+                    .Replace(replik, @"\([^)]*\)", "").Trim();
+                while (replik.Contains("  ")) replik = replik.Replace("  ", " ");
+                if (replik.Length == 0) continue;
+
                 _bolumler[aktif].Add(new Replik(NormalizeKonusan(konusan), replik));
             }
         }

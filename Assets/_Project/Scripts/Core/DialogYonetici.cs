@@ -22,6 +22,7 @@ namespace Ulak.Core
         private GameObject _balon;
         private SpriteRenderer _kare;
         private TextMesh _yazi;
+        private TextMesh _ipucu;
 
         // ---- akış ----
         private List<Replik> _replikler;
@@ -84,13 +85,20 @@ namespace Ulak.Core
         private void ReplikGoster()
         {
             var r = _replikler[_sira];
-            string metin = r.Konusan + ":\n" + Sar(r.Metin, 30);
+            // İsim: küçük punto + karaktere özel renk (zengin metin etiketleri).
+            string baslik = "<size=38><color=" + KonusanRengi(r.Konusan) + ">"
+                          + r.Konusan + "</color></size>";
+            string metin = baslik + "\n" + Sar(r.Metin, 30);
             _yazi.text = metin;
 
-            // Kareyi metne göre boyutla.
+            // Kutuyu metne göre boyutla (Sliced: köşeler bozulmaz).
             int satirSayisi = metin.Split('\n').Length;
-            float h = 0.35f * satirSayisi + 0.3f;
-            _kare.transform.localScale = new Vector3(4.6f, h, 1f);
+            float h = 0.35f * satirSayisi + 0.55f;
+            _kare.size = new Vector2(4.6f, h);
+
+            // Ana metni hafif yukarı al, ipucunu kutunun en altına yerleştir.
+            _yazi.transform.localPosition = new Vector3(0f, 0.1f, 0f);
+            _ipucu.transform.localPosition = new Vector3(0f, -h * 0.5f + 0.16f, 0f);
 
             _balon.SetActive(true);
         }
@@ -114,7 +122,8 @@ namespace Ulak.Core
             var kareGo = new GameObject("Kare");
             kareGo.transform.SetParent(_balon.transform, false);
             _kare = kareGo.AddComponent<SpriteRenderer>();
-            _kare.sprite = BeyazKare();
+            _kare.sprite = SpriteUtil.YuvarlakKutu();
+            _kare.drawMode = SpriteDrawMode.Sliced; // köşeler her boyutta yuvarlak kalır
             _kare.color = new Color(0.07f, 0.07f, 0.12f, 0.93f);
             _kare.sortingOrder = 200;
 
@@ -129,6 +138,19 @@ namespace Ulak.Core
             _yazi.color = Color.white;
             yaziGo.GetComponent<MeshRenderer>().sortingOrder = 201;
 
+            // Alt ipucu: "devam etmek için tıklayın"
+            var ipucuGo = new GameObject("Ipucu");
+            ipucuGo.transform.SetParent(_balon.transform, false);
+            _ipucu = ipucuGo.AddComponent<TextMesh>();
+            _ipucu.anchor = TextAnchor.MiddleCenter;
+            _ipucu.alignment = TextAlignment.Center;
+            _ipucu.characterSize = 0.045f;
+            _ipucu.fontSize = 40;
+            _ipucu.fontStyle = FontStyle.Italic;
+            _ipucu.color = new Color(0.65f, 0.65f, 0.7f);
+            _ipucu.text = "devam etmek için tıklayın";
+            ipucuGo.GetComponent<MeshRenderer>().sortingOrder = 201;
+
             _balon.SetActive(false);
         }
 
@@ -142,6 +164,19 @@ namespace Ulak.Core
             tex.SetPixels32(px); tex.Apply();
             _beyaz = Sprite.Create(tex, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 4f);
             return _beyaz;
+        }
+
+        /// <summary>Konuşana özel isim rengi.</summary>
+        private static string KonusanRengi(string konusan)
+        {
+            switch (konusan)
+            {
+                case "BALAMIR": return "#8C1A26";  // bordo
+                case "KAM": return "#E03030";      // kırmızı
+                case "BUMIN": return "#7EC8E3";    // açık mavi
+                case "TONYUKUK": return "#9AA0A6"; // gri
+                default: return "#DDDDDD";
+            }
         }
 
         /// <summary>Kelime sınırından satır sarma (TextMesh sarmayı bilmez).</summary>
@@ -176,6 +211,10 @@ namespace Ulak.Core
             }
             var rb = p.GetComponent<Rigidbody2D>();
             if (rb != null) rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
+
+            // Yürüme animasyonunda takılı kalmasın → idle setine dön.
+            var book = p.GetComponent<SpriteFlipbook>();
+            if (book != null) book.SetMoving(false);
         }
 
         private void OyuncuyuSerbestBirak()
