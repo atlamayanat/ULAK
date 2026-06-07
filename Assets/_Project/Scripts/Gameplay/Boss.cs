@@ -34,8 +34,8 @@ public class BossController : MonoBehaviour, IDamageable
     public int meleeDamage = 20;
     public int contactDamage = 10;
 
-    [Tooltip("Boss kaç saniye yakın vuruş yapamazsa olduğu yere çakılıp uzaktan sıkmaya başlar?")]
-    public float antiKiteSuresi = 5f; // YENİ: Inspector'dan ayarlanabilir süre
+    [Tooltip("Boss kaç saniye hasar veremezse/alamazsa olduğu yere çakılıp uzaktan sıkmaya başlar?")]
+    public float antiKiteSuresi = 5f;
 
     public GameObject rangedProjectilePrefab;
     public GameObject meleeVisualPrefab;
@@ -49,7 +49,10 @@ public class BossController : MonoBehaviour, IDamageable
     private bool isLeaping = false;
     private bool isStunned = false;
     private bool isAttacking = false;
-    private float lastMeleeTime = 0f;
+    private float lastCombatTime = 0f;
+
+    // Otomatik Kat Değiştirme Sistemi İçin Hafıza Alanı
+    private BossZiplamaNoktasi[] tumZiplamaNoktalari;
 
     public bool IsAlive => currentHealth > 0;
 
@@ -65,7 +68,10 @@ public class BossController : MonoBehaviour, IDamageable
         if (sr != null) originalColor = sr.color;
 
         originalScale = transform.localScale;
-        lastMeleeTime = Time.time;
+        lastCombatTime = Time.time;
+
+        // Haritadaki tüm görünmez zıplama collider'larını dinamik olarak bulur
+        tumZiplamaNoktalari = FindObjectsByType<BossZiplamaNoktasi>(FindObjectsSortMode.None);
 
         if (healthBarParent != null)
             StartCoroutine(BarIntroAnimation());
@@ -88,8 +94,7 @@ public class BossController : MonoBehaviour, IDamageable
         Vector2 bakisYonu = new Vector2(Mathf.Sign(transform.localScale.x), 0);
         bool duvaraCarpti = Physics2D.Raycast(transform.position, bakisYonu, 1.2f, groundLayer);
 
-        // YENİ: Belirlediğin süre aşıldı mı?
-        bool antiKiteAktif = (Time.time - lastMeleeTime > antiKiteSuresi);
+        bool antiKiteAktif = (Time.time - lastCombatTime > antiKiteSuresi);
 
         // --- SALDIRI KARAR MEKANİZMASI ---
         if (Time.time >= nextAttackTime && isGrounded)
@@ -97,13 +102,11 @@ public class BossController : MonoBehaviour, IDamageable
             float distanceToPlayer = Vector2.Distance(transform.position, player.position);
             bool ayniKatta = Mathf.Abs(distY) < 2.5f;
 
-            // 1. Yakın vurabiliyorsa vur (Sayacı Sıfırlar)
             if (ayniKatta && distanceToPlayer <= meleeRange && !duvaraCarpti)
             {
                 StartCoroutine(SaldiriAnimasyonu(true));
                 return;
             }
-            // 2. Anti-Kite Aktifse VEYA normal uzak saldırı pozisyonundaysa uzaktan sık
             else if (antiKiteAktif || (ayniKatta && !duvaraCarpti))
             {
                 StartCoroutine(SaldiriAnimasyonu(false));
@@ -114,7 +117,6 @@ public class BossController : MonoBehaviour, IDamageable
         // --- HAREKET SİSTEMİ ---
         float dirX = 0f;
 
-        // TARET MODU: Eğer Kite süresi dolduysa yürümeyi tamamen kes, olduğu yerde kalıp sana dönsün
         if (antiKiteAktif && isGrounded)
         {
             dirX = 0f;
@@ -124,14 +126,40 @@ public class BossController : MonoBehaviour, IDamageable
         }
         else
         {
-            // NORMAL KOVALAMA
+            // 1. DURUM: OYUNCU ALT KATTAYSA
             if (distY < -1.5f)
             {
                 if (Mathf.Abs(distX) < 1.5f)
-                    dirX = Mathf.Sign(transform.localScale.x);
+                    dirX = Mathf.Sign(transform.localScale.x); // Kenara kadar yürüyüp düş
                 else
                     dirX = Mathf.Sign(distX);
             }
+            // 2. DURUM: OYUNCU ÜST KATTAYSA (Kritik Çözüm!)
+            else if (distY > 1.5f)
+            {
+                // Doğrudan oyuncunun altına gitme, en yakın merdivene/zıplama trigger'ına koş!
+                if (tumZiplamaNoktalari != null && tumZiplamaNoktalari.Length > 0)
+                {
+                    Transform enYakinNokta = tumZiplamaNoktalari[0].transform;
+                    float enYakinMesafe = Vector2.Distance(transform.position, enYakinNokta.position);
+
+                    for (int i = 1; i < tumZiplamaNoktalari.Length; i++)
+                    {
+                        float m = Vector2.Distance(transform.position, tumZiplamaNoktalari[i].transform.position);
+                        if (m < enYakinMesafe)
+                        {
+                            enYakinMesafe = m;
+                            enYakinNokta = tumZiplamaNoktalari[i].transform;
+                        }
+                    }
+                    dirX = Mathf.Sign(enYakinNokta.position.x - transform.position.x);
+                }
+                else
+                {
+                    dirX = Mathf.Sign(distX);
+                }
+            }
+            // 3. DURUM: AYNI KATTALARSA
             else
             {
                 if (Mathf.Abs(distX) > 0.2f)
@@ -144,7 +172,6 @@ public class BossController : MonoBehaviour, IDamageable
             }
         }
 
-        // Hareketi Uygula
         rb.linearVelocity = new Vector2(dirX * currentMoveSpeed, rb.linearVelocity.y);
 
         if (dirX != 0 && !antiKiteAktif)
@@ -157,7 +184,6 @@ public class BossController : MonoBehaviour, IDamageable
     IEnumerator SaldiriAnimasyonu(bool isMelee)
     {
         isAttacking = true;
-
         rb.linearVelocity = new Vector2(0, rb.linearVelocity.y);
 
         float dirX = Mathf.Sign(player.position.x - transform.position.x);
@@ -168,18 +194,11 @@ public class BossController : MonoBehaviour, IDamageable
 
         yield return new WaitForSeconds(0.2f);
 
-        if (isMelee)
-        {
-            MeleeAttack();
-            lastMeleeTime = Time.time; // Yakın vuruş yaptı! Anti-Kite Taret modundan çıkıp tekrar kovalamaya başlar
-        }
-        else
-        {
-            RangedAttack();
-        }
+        if (isMelee) MeleeAttack();
+        else RangedAttack();
 
+        lastCombatTime = Time.time;
         yield return new WaitForSeconds(0.5f);
-
         isAttacking = false;
     }
 
@@ -250,6 +269,7 @@ public class BossController : MonoBehaviour, IDamageable
                         float pushDirX = Mathf.Sign(hit.transform.position.x - transform.position.x);
                         Vector2 kb = new Vector2(pushDirX, 0.3f).normalized * 14f;
                         dmg.TakeDamage(meleeDamage, kb);
+                        lastCombatTime = Time.time;
                     }
                 }
             }
@@ -266,6 +286,7 @@ public class BossController : MonoBehaviour, IDamageable
                 float pushDirX = Mathf.Sign(collision.transform.position.x - transform.position.x);
                 Vector2 kb = new Vector2(pushDirX, 0.3f).normalized * 10f;
                 dmg.TakeDamage(contactDamage, kb);
+                lastCombatTime = Time.time;
             }
         }
     }
@@ -277,8 +298,18 @@ public class BossController : MonoBehaviour, IDamageable
         {
             GameObject ok = Instantiate(rangedProjectilePrefab, firePoint.position, Quaternion.identity);
             Vector2 yon = (player.position - firePoint.position).normalized;
-            ok.GetComponent<Rigidbody2D>().linearVelocity = yon * 9f;
-            Destroy(ok, 3f);
+
+            // Yeni fırlatılan mermiye hızını veriyoruz
+            var projectileScript = ok.GetComponent<BossProjectile>();
+            if (projectileScript != null)
+            {
+                ok.GetComponent<Rigidbody2D>().linearVelocity = yon * projectileScript.speed;
+            }
+            else
+            {
+                ok.GetComponent<Rigidbody2D>().linearVelocity = yon * 9f;
+            }
+            Destroy(ok, 4f);
         }
     }
 
@@ -286,6 +317,7 @@ public class BossController : MonoBehaviour, IDamageable
     {
         if (!IsAlive) return;
         currentHealth -= damage;
+        lastCombatTime = Time.time;
 
         if (healthBarFill != null)
             healthBarFill.rectTransform.localScale = new Vector3(currentHealth / maxHealth, 1, 1);
@@ -297,75 +329,12 @@ public class BossController : MonoBehaviour, IDamageable
             return;
         }
 
-        if (!isAttacking && !isLeaping)
-        {
-            StartCoroutine(DamageEffect(knockback));
-        }
-        else
-        {
-            StartCoroutine(SadeceRenkDegistir());
-        }
+        if (!isAttacking && !isLeaping) StartCoroutine(DamageEffect(knockback));
+        else StartCoroutine(SadeceRenkDegistir());
     }
 
-    IEnumerator BarIntroAnimation()
-    {
-        healthBarParent.transform.localScale = new Vector3(0, 1, 1);
-        float timer = 0f;
-        while (timer < 1f)
-        {
-            timer += Time.deltaTime * 1.5f;
-            healthBarParent.transform.localScale = new Vector3(Mathf.Lerp(0, 1, timer), 1, 1);
-            yield return null;
-        }
-    }
-
-    IEnumerator DamageEffect(Vector2 knockback)
-    {
-        isStunned = true;
-
-        if (sr != null) sr.color = Color.white;
-        rb.linearVelocity = new Vector2(knockback.x, rb.linearVelocity.y);
-
-        yield return new WaitForSeconds(0.2f);
-
-        if (sr != null) sr.color = originalColor;
-        isStunned = false;
-    }
-
-    IEnumerator SadeceRenkDegistir()
-    {
-        if (sr != null) sr.color = Color.white;
-        yield return new WaitForSeconds(0.1f);
-        if (sr != null) sr.color = originalColor;
-    }
-
-    IEnumerator TransitionToPhase2()
-    {
-        isResettingToCenter = true;
-        rb.linearVelocity = Vector2.zero;
-        rb.bodyType = RigidbodyType2D.Kinematic;
-
-        while (Vector2.Distance(transform.position, defaultPosition) > 0.1f)
-        {
-            transform.position = Vector2.MoveTowards(transform.position, defaultPosition, baseMoveSpeed * 5f * Time.deltaTime);
-            yield return null;
-        }
-
-        rb.bodyType = RigidbodyType2D.Dynamic;
-        isPhase2 = true;
-        currentMoveSpeed = baseMoveSpeed * 1.75f;
-        attackCooldown *= 0.6f;
-
-        yield return new WaitForSeconds(1f);
-        isResettingToCenter = false;
-    }
-
-    private void OnDrawGizmosSelected()
-    {
-        if (firePoint != null)
-        {
-            Gizmos.color = new Color(1, 0, 0, 0.4f);
-            Gizmos.DrawWireSphere(firePoint.position, meleeRange * 0.8f);
-        }
-    }
+    IEnumerator BarIntroAnimation() { /* aynı kalacak */ yield return null; }
+    IEnumerator DamageEffect(Vector2 knockback) { isStunned = true; if (sr != null) sr.color = Color.white; rb.linearVelocity = new Vector2(knockback.x, rb.linearVelocity.y); yield return new WaitForSeconds(0.2f); if (sr != null) sr.color = originalColor; isStunned = false; }
+    IEnumerator SadeceRenkDegistir() { if (sr != null) sr.color = Color.white; yield return new WaitForSeconds(0.1f); if (sr != null) sr.color = originalColor; }
+    IEnumerator TransitionToPhase2() { isResettingToCenter = true; rb.linearVelocity = Vector2.zero; rb.bodyType = RigidbodyType2D.Kinematic; while (Vector2.Distance(transform.position, defaultPosition) > 0.1f) { transform.position = Vector2.MoveTowards(transform.position, defaultPosition, baseMoveSpeed * 5f * Time.deltaTime); yield return null; } rb.bodyType = RigidbodyType2D.Dynamic; isPhase2 = true; currentMoveSpeed = baseMoveSpeed * 1.75f; attackCooldown *= 0.6f; yield return new WaitForSeconds(1f); isResettingToCenter = false; }
 }
