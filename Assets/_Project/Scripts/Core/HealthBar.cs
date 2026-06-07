@@ -38,7 +38,7 @@ namespace Ulak.Core
         private void LateUpdate()
         {
             float t = _health.Max > 0 ? Mathf.Clamp01((float)_health.Current / _health.Max) : 0f;
-            _fill.localScale = new Vector3(size.x * t, size.y, 1f);
+            _fill.localScale = new Vector3(size.x * t, size.y * 4f, 1f); // hap dokusu 0.25u taban
             _fillSr.color = Color.Lerp(lowColor, fillColor, t);
         }
 
@@ -48,22 +48,22 @@ namespace Ulak.Core
             root.transform.SetParent(transform, false);
             root.transform.localPosition = offset;
 
-            // Arka plan (merkez pivot)
+            // Arka plan (merkez pivot, yuvarlak uçlu hap)
             var back = new GameObject("Back");
             back.transform.SetParent(root.transform, false);
-            back.transform.localScale = new Vector3(size.x, size.y, 1f);
+            back.transform.localScale = new Vector3(size.x, size.y * 4f, 1f); // hap 0.25u yüksek → 4x = hedef
             var backSr = back.AddComponent<SpriteRenderer>();
-            backSr.sprite = GetWhiteSprite(centerPivot: true);
+            backSr.sprite = SpriteUtil.YuvarlakBar();
             backSr.color = backColor;
             backSr.sortingOrder = 20;
 
-            // Dolgu (sol pivot — soldan sağa dolar/boşalır)
+            // Dolgu (sol pivot — soldan sağa dolar/boşalır, yuvarlak uçlu)
             var fill = new GameObject("Fill");
             fill.transform.SetParent(root.transform, false);
             fill.transform.localPosition = new Vector3(-size.x * 0.5f, 0f, 0f);
-            fill.transform.localScale = new Vector3(size.x, size.y, 1f);
+            fill.transform.localScale = new Vector3(size.x, size.y * 4f, 1f);
             _fillSr = fill.AddComponent<SpriteRenderer>();
-            _fillSr.sprite = GetWhiteSprite(centerPivot: false);
+            _fillSr.sprite = SpriteUtil.YuvarlakBarSol();
             _fillSr.color = fillColor;
             _fillSr.sortingOrder = 21;
             _fill = fill.transform;

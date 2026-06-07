@@ -49,7 +49,7 @@ ASKER: Dur! Bu obaya yabancı giremez. Geri dön, ulak.
 BALAMIR: Kam Ana'dan haber getirdim. Kağanınızla konuşmam gerek.
 tonykuk: (gölgeden, alaycı) Bırak girsin… Umay'ın ulağı bunca yolu boşa mı tepmiş?
 
-tonykuk Demek yaşlı kadın beni de kendi oduna çağırıyor. Ne cömert…
+tonykuk: Demek yaşlı kadın beni de kendi oduna çağırıyor. Ne cömert…
 BALAMIR: Üç oba bir olursa dağdan çıkış var, kağanım.
 tonykuk: (güler) Çıkışmış. Ama her şeyin bir bedeli olur.
 tonykuk: Şu tepenin ardında ıssız bir köy var; orada bana ait bir ongun durur. Onu getir — getir de belki Umay'ın çağrısına "olur" derim.

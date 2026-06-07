@@ -15,6 +15,10 @@ namespace Ulak.Gameplay
         [Tooltip("replikler.txt içindeki BÖLÜM numarası.")]
         [SerializeField] private int bolumNo = 2;
         [SerializeField] private TextAsset replikDosyasi;
+        [Tooltip("Bölümün kaçıncı repliğinden başlanacak (0 = ilk).")]
+        [SerializeField] private int baslangicReplik = 0;
+        [Tooltip("Kaçıncı replikte bitecek (dahil). -1 = bölümün sonuna kadar.")]
+        [SerializeField] private int bitisReplik = -1;
         [Tooltip("İkon bu mesafeden tıklanabilir (çok uzaktan başlatılamasın).")]
         [SerializeField] private float tiklamaMesafesi = 7f;
         [Tooltip("Oyuncu bu mesafeye girince diyalog OTOMATİK başlar (tıklamasız).")]
@@ -96,8 +100,14 @@ namespace Ulak.Gameplay
                 return;
             }
 
+            // İstenen aralığı al (bölüm birden çok NPC'ye bölünebilsin).
+            int bas = Mathf.Clamp(baslangicReplik, 0, replikler.Count - 1);
+            int son = bitisReplik < 0 ? replikler.Count - 1
+                                      : Mathf.Clamp(bitisReplik, bas, replikler.Count - 1);
+            var dilim = replikler.GetRange(bas, son - bas + 1);
+
             Transform npc = transform;
-            DialogYonetici.Baslat(replikler,
+            DialogYonetici.Baslat(dilim,
                 konusan => konusan == "BALAMIR" && oyuncu != null ? oyuncu : npc);
         }
 

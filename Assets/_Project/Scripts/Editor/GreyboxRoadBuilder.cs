@@ -1086,6 +1086,89 @@ namespace Ulak.EditorTools
             go.AddComponent<TiledBoxSync>();
         }
 
+        // ---- Ana menü arayüzünü oyun temasıyla giydir ----
+        // Arka plan: gokyuzu + dağ silüeti. Butonlar: koyu bordo zemin +
+        // altın yazı. Başlık metinleri altın. Buton işlevlerine DOKUNMAZ.
+        public static string MenuArayuzunuGiydir()
+        {
+            EditorSceneManager.SaveOpenScenes();
+            var scene = EditorSceneManager.OpenScene("Assets/Scenes/MainMenu.unity");
+
+            var canvas = Object.FindFirstObjectByType<Canvas>();
+            if (canvas == null) return "Canvas yok";
+
+            var gok = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/Background/gokyuzu.png");
+            var dag = AssetDatabase.LoadAssetAtPath<Sprite>("Assets/_Project/Art/Background/daglar.png");
+
+            var sb = new System.Text.StringBuilder();
+
+            // --- Arka plan katmanları (Canvas'ın İLK çocukları → en geride çizilir) ---
+            var eski = canvas.transform.Find("UlakArkaPlan");
+            if (eski != null) Object.DestroyImmediate(eski.gameObject);
+
+            var arka = new GameObject("UlakArkaPlan", typeof(RectTransform));
+            arka.transform.SetParent(canvas.transform, false);
+            arka.transform.SetAsFirstSibling();
+            var arkaRt = arka.GetComponent<RectTransform>();
+            arkaRt.anchorMin = Vector2.zero; arkaRt.anchorMax = Vector2.one;
+            arkaRt.offsetMin = Vector2.zero; arkaRt.offsetMax = Vector2.zero;
+
+            if (gok != null)
+            {
+                var gokGo = new GameObject("Gokyuzu", typeof(RectTransform));
+                gokGo.transform.SetParent(arka.transform, false);
+                var rt = gokGo.GetComponent<RectTransform>();
+                rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+                rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+                var img = gokGo.AddComponent<UnityEngine.UI.Image>();
+                img.sprite = gok;
+                img.preserveAspect = false; // tüm ekranı kapla
+                sb.Append("gokyuzu ");
+            }
+            if (dag != null)
+            {
+                var dagGo = new GameObject("Daglar", typeof(RectTransform));
+                dagGo.transform.SetParent(arka.transform, false);
+                var rt = dagGo.GetComponent<RectTransform>();
+                rt.anchorMin = new Vector2(0f, 0f); rt.anchorMax = new Vector2(1f, 0.42f);
+                rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+                var img = dagGo.AddComponent<UnityEngine.UI.Image>();
+                img.sprite = dag;
+                img.preserveAspect = false;
+                img.color = new Color(0.85f, 0.88f, 0.95f, 0.95f); // hafif puslu
+                sb.Append("daglar ");
+            }
+
+            // --- Butonlar: koyu bordo zemin + altın yazı ---
+            var bordo = new Color(0.42f, 0.10f, 0.14f, 0.96f);
+            var altin = new Color(0.95f, 0.82f, 0.45f);
+            int btnSay = 0;
+            foreach (var btn in canvas.GetComponentsInChildren<UnityEngine.UI.Button>(true))
+            {
+                var img = btn.GetComponent<UnityEngine.UI.Image>();
+                if (img != null) img.color = bordo;
+
+                foreach (var tmp in btn.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true))
+                    tmp.color = altin;
+                foreach (var txt in btn.GetComponentsInChildren<UnityEngine.UI.Text>(true))
+                    txt.color = altin;
+                btnSay++;
+            }
+
+            // --- Buton DIŞI başlık/etiket metinleri: altın ---
+            int baslikSay = 0;
+            foreach (var tmp in canvas.GetComponentsInChildren<TMPro.TextMeshProUGUI>(true))
+            {
+                if (tmp.GetComponentInParent<UnityEngine.UI.Button>() != null) continue;
+                tmp.color = altin;
+                baslikSay++;
+            }
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene);
+            return "arka plan: " + sb + "| buton=" + btnSay + " baslik=" + baslikSay;
+        }
+
         // ---- Su akışını (UmayKoy paketi) diğer oyun sahnelerine kur ----
         // BossFight HARİÇ: zeminin altına Su (SuAkinti + SpriteMask) ve
         // SuYansima ekler. Var olan Su objesine dokunmaz (idempotent).
